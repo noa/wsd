@@ -48,14 +48,14 @@ _DIGIT_RE = re.compile(br"\d")
 def maybe_download(directory, filename, url):
   """Download filename from url unless it's already in directory."""
   if not tf.gfile.Exists(directory):
-    print "Creating directory %s" % directory
+    print("Creating directory %s" % directory)
     os.mkdir(directory)
   filepath = os.path.join(directory, filename)
   if not tf.gfile.Exists(filepath):
-    print "Downloading %s to %s" % (url, filepath)
+    print("Downloading %s to %s" % (url, filepath))
     filepath, _ = urllib.request.urlretrieve(url, filepath)
     statinfo = os.stat(filepath)
-    print "Successfully downloaded", filename, statinfo.st_size, "bytes"
+    print("Successfully downloaded", filename, statinfo.st_size, "bytes")
   return filepath
 
 def gunzip_file(gz_path, new_path):
@@ -73,7 +73,7 @@ def get_wmt_enfr_train_set(directory):
           tf.gfile.Exists(train_path +".en")):
     corpus_file = maybe_download(directory, "training-giga-fren.tar",
                                  _WMT_ENFR_TRAIN_URL)
-    print "Extracting tar file %s" % corpus_file
+    print("Extracting tar file %s" % corpus_file)
     with tarfile.open(corpus_file, "r") as corpus_tar:
       corpus_tar.extractall(directory)
     gunzip_file(train_path + ".fr.gz", train_path + ".fr")
@@ -88,7 +88,7 @@ def get_wmt_enfr_dev_set(directory):
   if not (tf.gfile.Exists(dev_path + ".fr") and
           tf.gfile.Exists(dev_path + ".en")):
     dev_file = maybe_download(directory, "dev-v2.tgz", _WMT_ENFR_DEV_URL)
-    print "Extracting tgz file %s" % dev_file
+    print("Extracting tgz file %s" % dev_file)
     with tarfile.open(dev_file, "r:gz") as dev_tar:
       fr_dev_file = dev_tar.getmember("dev/" + dev_name + ".fr")
       en_dev_file = dev_tar.getmember("dev/" + dev_name + ".en")
@@ -282,7 +282,6 @@ def sentence_to_token_ids_raw(sentence, vocabulary,
     result = result[:-1]
   return result
 
-
 def sentence_to_token_ids(sentence, vocabulary,
                           tokenizer=None, normalize_digits=old_style):
   """Convert a string to list of integers representing token-ids, tab=0."""
@@ -312,7 +311,7 @@ def data_to_token_ids(data_path, vocabulary_path, tokenizer=None,
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
   if not tf.gfile.Exists(target_path):
-    print "Tokenizing data in %s" % data_path
+    print("Tokenizing data in %s" % data_path)
     vocab, _ = initialize_vocabulary(vocabulary_path)
     with tf.gfile.GFile(data_path, mode="rb") as data_file:
       with tf.gfile.GFile(target_path, mode="w") as tokens_file:
@@ -320,7 +319,7 @@ def data_to_token_ids(data_path, vocabulary_path, tokenizer=None,
         for line in data_file:
           counter += 1
           if counter % 100000 == 0:
-            print "  tokenizing line %d" % counter
+            print("  tokenizing line %d" % counter)
           token_ids = sentence_to_token_ids(line, vocab, tokenizer,
                                             normalize_digits)
           tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
