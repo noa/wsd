@@ -134,8 +134,6 @@ def read_data_into_global(source_path, target_path, buckets,
 
 def initialize(sess=None):
   """Initialize data and model."""
-  global MAXLEN_F
-
   # Create training directory if it does not exist.
   if not tf.gfile.IsDirectory(FLAGS.train_dir):
     data.print_out("Creating training directory %s." % FLAGS.train_dir)
