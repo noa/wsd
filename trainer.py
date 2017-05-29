@@ -32,7 +32,6 @@ tf.app.flags.DEFINE_float("init_weight", 0.8, "Initial weights deviation.")
 tf.app.flags.DEFINE_float("max_grad_norm", 4.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_float("cutoff", 1.2, "Cutoff at the gates.")
 tf.app.flags.DEFINE_float("dropout", 0.1, "Dropout that much.")
-tf.app.flags.DEFINE_float("grad_noise_scale", 0.0, "Gradient noise scale.")
 tf.app.flags.DEFINE_float("max_sampling_rate", 0.1, "Maximal sampling rate.")
 tf.app.flags.DEFINE_float("length_norm", 0.0, "Length normalization.")
 tf.app.flags.DEFINE_integer("batch_size", 32, "Batch size.")
@@ -211,11 +210,6 @@ def initialize(sess=None):
       tf.orthogonal_initializer(gain=1.8 * init_weight))
   max_sampling_rate = FLAGS.max_sampling_rate if FLAGS.mode == 0 else 0.0
   o = FLAGS.vocab_size if FLAGS.max_target_vocab < 1 else FLAGS.max_target_vocab
-  ngpu.CHOOSE_K = FLAGS.soft_mem_size
-  do_beam_model = FLAGS.train_beam_freq > 0.0001 and FLAGS.beam_size > 1
-  beam_size = FLAGS.beam_size if FLAGS.mode > 0 and not do_beam_model else 1
-  beam_size = min(beam_size, FLAGS.beam_size)
-  beam_model = None
   def make_ngpu(cur_beam_size, back):
     return ngpu.NeuralGPU(
         FLAGS.nmaps, FLAGS.vec_size, FLAGS.vocab_size, o,
@@ -225,17 +219,12 @@ def initialize(sess=None):
         FLAGS.num_replicas, FLAGS.grad_noise_scale, max_sampling_rate,
         atrous=FLAGS.atrous, do_rnn=FLAGS.rnn_baseline,
         do_layer_norm=FLAGS.layer_norm, beam_size=cur_beam_size, backward=back)
+
   if sess is None:
     with tf.device(tf.train.replica_device_setter(FLAGS.ps_tasks)):
       model = make_ngpu(beam_size, True)
-      if do_beam_model:
-        tf.get_variable_scope().reuse_variables()
-        beam_model = make_ngpu(FLAGS.beam_size, False)
   else:
     model = make_ngpu(beam_size, True)
-    if do_beam_model:
-      tf.get_variable_scope().reuse_variables()
-      beam_model = make_ngpu(FLAGS.beam_size, False)
 
   sv = None
   if sess is None:
@@ -400,34 +389,17 @@ def train():
       # For words in the word vector file, set their embedding at start.
       bound1 = FLAGS.steps_per_checkpoint - 1
       if FLAGS.word_vector_file_en and global_step < bound1 and is_chief:
-        assign_vectors(FLAGS.word_vector_file_en, "embedding:0",
-                       en_vocab_path, sess)
-        if FLAGS.max_target_vocab < 1:
-          assign_vectors(FLAGS.word_vector_file_en, "target_embedding:0",
-                         en_vocab_path, sess)
-
-      if FLAGS.word_vector_file_fr and global_step < bound1 and is_chief:
-        assign_vectors(FLAGS.word_vector_file_fr, "embedding:0",
-                       fr_vocab_path, sess)
-        if FLAGS.max_target_vocab < 1:
-          assign_vectors(FLAGS.word_vector_file_fr, "target_embedding:0",
-                         fr_vocab_path, sess)
+        assign_vectors(FLAGS.word_vector_file, "embedding:0",
+                       vocab_path, sess)
 
       for _ in xrange(FLAGS.steps_per_checkpoint):
         step_count += 1
         step_c1 += 1
         global_step = int(model.global_step.eval())
-        train_beam_anneal = global_step / float(FLAGS.train_beam_anneal)
-        train_beam_freq = FLAGS.train_beam_freq * min(1.0, train_beam_anneal)
         p = random.choice(FLAGS.problem.split("-"))
-        train_set = global_train_set[p][-1]
-        bucket_id = get_bucket_id(train_buckets_scale[p][-1], max_cur_length,
+        train_set = global_train_set
+        bucket_id = get_bucket_id(train_buckets_scale, max_cur_length,
                                   train_set)
-        # Prefer longer stuff 60% of time if not wmt.
-        if np.random.randint(100) < 60 and FLAGS.problem != "wmt":
-          bucket1 = get_bucket_id(train_buckets_scale[p][-1], max_cur_length,
-                                  train_set)
-          bucket_id = max(bucket1, bucket_id)
 
         # Run a step and time it.
         start_time = time.time()
@@ -435,29 +407,8 @@ def train():
                                      FLAGS.height)
         noise_param = math.sqrt(math.pow(global_step + 1, -0.55) *
                                 prev_seq_err) * FLAGS.grad_noise_scale
-        # In multi-step mode, we use best from beam for middle steps.
-        state, new_target, scores, history = None, None, None, []
-        while (FLAGS.beam_size > 1 and
-               train_beam_freq > np.random.random_sample()):
-          # Get the best beam (no training, just forward model).
-          new_target, new_first, new_inp, scores = get_best_beam(
-              beam_model, sess, inp, target,
-              batch_size, FLAGS.beam_size, bucket_id, history, p)
-          history.append(new_first)
-          # Training step with the previous input and the best beam as target.
-          _, _, _, state = model.step(sess, inp, new_target, FLAGS.do_train,
-                                      noise_param, update_mem=True, state=state)
-          # Change input to the new one for the next step.
-          inp = new_inp
-          # If all results are great, stop (todo: not to wait for all?).
-          if FLAGS.nprint > 1:
-            print scores
-          if sum(scores) / float(len(scores)) >= 10.0:
-            break
-        # The final step with the true target.
-        loss, res, gnorm, _ = model.step(
-            sess, inp, target, FLAGS.do_train, noise_param,
-            update_mem=True, state=state)
+        loss, res, gnorm, _ = model.step(sess, inp, target, FLAGS.do_train,
+                                         noise_param)
         step_time += time.time() - start_time
         acc_grad_norm += 0.0 if gnorm is None else float(gnorm)
 
