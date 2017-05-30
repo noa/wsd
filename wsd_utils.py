@@ -1,5 +1,7 @@
-# Copyright 2015 Google Inc. All Rights Reserved.
-# Copyright 2017 Johns Hopkins University. All Rights Reserved.
+# Copyright 2015 Google Inc.
+# Copyright 2017 Johns Hopkins University (Nicholas Andrews).
+#
+# All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -135,9 +137,9 @@ def basic_tokenizer(sentence):
 def space_tokenizer(sentence):
   return sentence.strip().split()
 
-def create_vocabulary(vocab_path, data_path, max_vocabulary_size,
-                      tokenizer, normalize_digits=False):
-  """Create vocabulary file (if it does not exist yet) from data file.
+def create_vocabulary(vocab_path, data_path, tokenizer,
+                      max_vocabulary_size=None, normalize_digits=False):
+  """Create vocabulary file from data file.
 
   Data file is assumed to contain one sentence per line. Each sentence is
   tokenized and digits are normalized (if normalize_digits is set).
@@ -153,7 +155,8 @@ def create_vocabulary(vocab_path, data_path, max_vocabulary_size,
       if None, basic_tokenizer will be used.
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
-  if not tf.gfile.Exists(vocab_path):
+  #if not tf.gfile.Exists(vocab_path):
+  if True:
     tf.logging.info("Creating vocabulary {} from data {}".format(vocab_path,
                                                                  data_path))
     vocab = {}
@@ -165,9 +168,7 @@ def create_vocabulary(vocab_path, data_path, max_vocabulary_size,
         if counter % 100000 == 0:
           tf.logging.info("processing en line %d" % counter)
 
-        # Tokenize the line
         tokens = tokenizer(line)
-
         for w in tokens:
           word = re.sub(_DIGIT_RE, "0", w) if normalize_digits else w
           if word in vocab:
@@ -178,8 +179,13 @@ def create_vocabulary(vocab_path, data_path, max_vocabulary_size,
       sorted_vocab = sorted(vocab, key=vocab.get, reverse=True)
 
       vocab_list = _START_VOCAB + sorted_vocab
-      if len(vocab_list) > max_vocabulary_size:
+      if max_vocabulary_size and len(vocab_list) > max_vocabulary_size:
+        tf.logging.info("{} > {}; truncating vocab".format(
+          len(vocab_list),
+          max_vocabulary_size
+        ))
         vocab_list = vocab_list[:max_vocabulary_size]
+      assert len(vocab_list) > 0
       with tf.gfile.GFile(vocab_path, mode="w") as vocab_file:
         for w in vocab_list:
           vocab_file.write(str(w) + "\n")
@@ -272,8 +278,9 @@ def data_to_token_ids(data_path, target_path, vocabulary_path, tokenizer,
                                             normalize_digits)
           tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
 
-def prepare_ptb_data(data_dir, vocabulary_size,
-                     tokenizer=None, normalize_digits=False):
+def prepare_ptb_data(data_dir, tokenizer,
+                     vocabulary_size=100000,
+                     normalize_digits=False):
   """ Create vocabularies and tokenize data.
 
   Args:
@@ -298,8 +305,9 @@ def prepare_ptb_data(data_dir, vocabulary_size,
 
   # Create vocabularies of the appropriate sizes.
   vocab_path = os.path.join(data_dir, "vocab%d.txt" % vocabulary_size)
-  create_vocabulary(vocab_path, train_path, vocabulary_size,
-                    tokenizer, normalize_digits=normalize_digits)
+  create_vocabulary(vocab_path, train_path, tokenizer,
+                    max_vocabulary_size=vocabulary_size,
+                    normalize_digits=normalize_digits)
   tf.logging.info('Vocabulary path: {}'.format(vocab_path))
 
   # Create token ids for the training data.
@@ -316,15 +324,28 @@ def prepare_ptb_data(data_dir, vocabulary_size,
 
   return (train_ids_path, dev_ids_path, vocab_path)
 
+def num_lines(path):
+  with open(path) as f:
+    ret = 0
+    for line in f:
+      ret += 1
+    return ret
+
 class DataTest(tf.test.TestCase):
   def test(self):
     tmpdatadir = tf.test.get_temp_dir()
-    train_ids_path, dev_ids_path, vocab_path = prepare_ptb_data(tmpdatadir,
-                                                                10000,
-                                                                space_tokenizer)
+    train_ids_path, dev_ids_path, vocab_path = prepare_ptb_data(
+      tmpdatadir,
+      space_tokenizer,
+      vocabulary_size=9000)
+
     tf.logging.info('train: {}'.format(train_ids_path))
     tf.logging.info('valid: {}'.format(dev_ids_path))
     tf.logging.info('vocab: {}'.format(vocab_path))
+
+    assert num_lines(train_ids_path) > 0
+    assert num_lines(dev_ids_path) > 0
+    assert num_lines(vocab_path) > 0
 
 if __name__ == "__main__":
   tf.logging.set_verbosity(tf.logging.INFO)
