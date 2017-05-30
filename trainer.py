@@ -25,7 +25,9 @@ import numpy as np
 import tensorflow as tf
 
 import program_utils
+
 import data_utils as data
+import wsd_utils as wsd
 
 tf.app.flags.DEFINE_float("lr", 0.1, "Learning rate.")
 tf.app.flags.DEFINE_float("init_weight", 0.8, "Initial weights deviation.")
@@ -36,8 +38,6 @@ tf.app.flags.DEFINE_float("max_sampling_rate", 0.1, "Maximal sampling rate.")
 tf.app.flags.DEFINE_float("length_norm", 0.0, "Length normalization.")
 tf.app.flags.DEFINE_integer("batch_size", 32, "Batch size.")
 tf.app.flags.DEFINE_integer("steps_per_checkpoint", 100, "Steps per epoch.")
-tf.app.flags.DEFINE_integer("nmaps", 64, "Number of floats in each cell.")
-tf.app.flags.DEFINE_integer("vec_size", 64, "Size of word vectors.")
 tf.app.flags.DEFINE_integer("train_data_size", 1000, "Training examples/len.")
 tf.app.flags.DEFINE_integer("max_length", 40, "Maximum length.")
 tf.app.flags.DEFINE_integer("random_seed", 125459, "Random seed.")
@@ -326,7 +326,7 @@ def assign_vectors(word_vector_file, embedding_key, vocab_path, sess):
 
 def print_vectors(embedding_key, vocab_path, word_vector_file):
   """Print vectors from the given variable."""
-  _, rev_vocab = wmt.initialize_vocabulary(vocab_path)
+  _, rev_vocab = wsd.initialize_vocabulary(vocab_path)
   vectors_variable = [v for v in tf.trainable_variables()
                       if embedding_key == v.name]
   if len(vectors_variable) != 1:

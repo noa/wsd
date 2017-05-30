@@ -23,80 +23,61 @@ from six.moves import urllib
 import tensorflow as tf
 
 # Special vocabulary symbols - we always put them at the start.
-_PAD = b"_PAD"
-_HELDOUT = b"_HELDOUT"
-_EOS = b"_EOS"
-_UNK = b"_CHAR_UNK"
-_SPACE = b"_SPACE"
-_START_VOCAB = [_PAD, _HELDOUT, _EOS, _UNK, _SPACE]
+_PAD = "_PAD"
+_HELDOUT = "_HELDOUT"
+_EOS = "_EOS"
+_UNK = "_CHAR_UNK"
+_SPACE = "_SPACE"
+_START_VOCAB = [_PAD, _HELDOUT, _EOS, _UNK]
 
 PAD_ID = 0
 HELDOUT_ID = 1
 EOS_ID = 2
 UNK_ID = 3
-SPACE_ID = 4
 
 # Regular expressions used to tokenize.
 _CHAR_MARKER = "_CHAR_"
 _CHAR_MARKER_LEN = len(_CHAR_MARKER)
 _SPEC_CHARS = "" + chr(226) + chr(153) + chr(128)
 _PUNCTUATION = "][.,!?\"':;%$#@&*+}{|><=/^~)(_`,0123456789" + _SPEC_CHARS + "-"
-_WORD_SPLIT = re.compile(b"([" + _PUNCTUATION + "])")
-_OLD_WORD_SPLIT = re.compile(b"([.,!?\"':;)(])")
-_DIGIT_RE = re.compile(br"\d")
+_WORD_SPLIT = re.compile("([" + _PUNCTUATION + "])")
+_OLD_WORD_SPLIT = re.compile("([.,!?\"':;)(])")
+_DIGIT_RE = re.compile("\d")
+
+# Data locations
+_PTB_URL = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
 
 def maybe_download(directory, filename, url):
   """Download filename from url unless it's already in directory."""
   if not tf.gfile.Exists(directory):
-    print("Creating directory %s" % directory)
+    tf.logging.info("Creating directory %s" % directory)
     os.mkdir(directory)
   filepath = os.path.join(directory, filename)
   if not tf.gfile.Exists(filepath):
-    print("Downloading %s to %s" % (url, filepath))
+    tf.logging.info("Downloading %s to %s" % (url, filepath))
     filepath, _ = urllib.request.urlretrieve(url, filepath)
     statinfo = os.stat(filepath)
-    print("Successfully downloaded", filename, statinfo.st_size, "bytes")
+    tf.logging.info("Successfully downloaded", filename, statinfo.st_size,
+                    "bytes")
   return filepath
 
-def gunzip_file(gz_path, new_path):
-  """Unzips from gz_path into new_path."""
-  print "Unpacking %s to %s" % (gz_path, new_path)
-  with gzip.open(gz_path, "rb") as gz_file:
-    with open(new_path, "wb") as new_file:
-      for line in gz_file:
-        new_file.write(line)
-
-def get_wmt_enfr_train_set(directory):
-  """Download the WMT en-fr training corpus to directory unless it's there."""
-  train_path = os.path.join(directory, "giga-fren.release2.fixed")
-  if not (tf.gfile.Exists(train_path +".fr") and
-          tf.gfile.Exists(train_path +".en")):
-    corpus_file = maybe_download(directory, "training-giga-fren.tar",
-                                 _WMT_ENFR_TRAIN_URL)
-    print("Extracting tar file %s" % corpus_file)
+def get_ptb_train_set(directory):
+  train_path = os.path.join(directory, "simple-examples/data/ptb.train.txt")
+  if not (tf.gfile.Exists(train_path)):
+    corpus_file = maybe_download(directory, "ptb.tgz", _PTB_URL)
+    tf.logging.info("Extracting tar file %s" % corpus_file)
     with tarfile.open(corpus_file, "r") as corpus_tar:
       corpus_tar.extractall(directory)
-    gunzip_file(train_path + ".fr.gz", train_path + ".fr")
-    gunzip_file(train_path + ".en.gz", train_path + ".en")
   return train_path
 
-
-def get_wmt_enfr_dev_set(directory):
-  """Download the WMT en-fr training corpus to directory unless it's there."""
-  dev_name = "newstest2013"
-  dev_path = os.path.join(directory, dev_name)
-  if not (tf.gfile.Exists(dev_path + ".fr") and
-          tf.gfile.Exists(dev_path + ".en")):
-    dev_file = maybe_download(directory, "dev-v2.tgz", _WMT_ENFR_DEV_URL)
-    print("Extracting tgz file %s" % dev_file)
-    with tarfile.open(dev_file, "r:gz") as dev_tar:
-      fr_dev_file = dev_tar.getmember("dev/" + dev_name + ".fr")
-      en_dev_file = dev_tar.getmember("dev/" + dev_name + ".en")
-      fr_dev_file.name = dev_name + ".fr"  # Extract without "dev/" prefix.
-      en_dev_file.name = dev_name + ".en"
-      dev_tar.extract(fr_dev_file, directory)
-      dev_tar.extract(en_dev_file, directory)
-  return dev_path
+def get_ptb_dev_set(directory):
+  valid_path = os.path.join(directory, "simple-examples/data/ptb.valid.txt")
+  if not (tf.gfile.Exists(valid_path)):
+    corpus_file = maybe_download(directory, "ptb.tgz", _PTB_URL)
+    tf.logging.info("Extracting tar file %s" % corpus_file)
+    with tarfile.open(corpus_file, "r") as corpus_tar:
+      corpus_tar.extractall(directory)
+  return valid_path
 
 def is_char(token):
   if len(token) > _CHAR_MARKER_LEN:
@@ -154,8 +135,8 @@ def basic_tokenizer(sentence):
 def space_tokenizer(sentence):
   return sentence.strip().split()
 
-def create_vocabulary(vocabulary_path, data_path, max_vocabulary_size,
-                      tokenizer=None, normalize_digits=False):
+def create_vocabulary(vocab_path, data_path, max_vocabulary_size,
+                      tokenizer, normalize_digits=False):
   """Create vocabulary file (if it does not exist yet) from data file.
 
   Data file is assumed to contain one sentence per line. Each sentence is
@@ -172,44 +153,36 @@ def create_vocabulary(vocabulary_path, data_path, max_vocabulary_size,
       if None, basic_tokenizer will be used.
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
-  if not tf.gfile.Exists(vocabulary_path):
-    print("Creating vocabulary %s from data %s" % (vocabulary_path, data_path))
-    vocab, chars = {}, {}
-    for c in _PUNCTUATION:
-      chars[c] = 1
-
-    with tf.gfile.GFile(data_path + ".en", mode="rb") as f:
+  if not tf.gfile.Exists(vocab_path):
+    tf.logging.info("Creating vocabulary {} from data {}".format(vocab_path,
+                                                                 data_path))
+    vocab = {}
+    with tf.gfile.GFile(data_path, mode="r") as f:
       counter = 0
       for line_in in f:
         line = " ".join(line_in.split())
         counter += 1
         if counter % 100000 == 0:
-          print("  processing en line %d" % counter)
-        for c in line:
-          if c in chars:
-            chars[c] += 1
-          else:
-            chars[c] = 1
-        tokens = tokenizer(line) if tokenizer else basic_tokenizer(line)
-        tokens = [t for t in tokens if not is_char(t) and t != _SPACE]
+          tf.logging.info("processing en line %d" % counter)
+
+        # Tokenize the line
+        tokens = tokenizer(line)
+
         for w in tokens:
-          word = re.sub(_DIGIT_RE, b"0", w) if normalize_digits else w
+          word = re.sub(_DIGIT_RE, "0", w) if normalize_digits else w
           if word in vocab:
             vocab[word] += 1
           else:
             vocab[word] = 1
 
       sorted_vocab = sorted(vocab, key=vocab.get, reverse=True)
-      sorted_chars = sorted(chars, key=vocab.get, reverse=True)
-      sorted_chars = [_CHAR_MARKER + c for c in sorted_chars]
-      vocab_list = _START_VOCAB + sorted_chars + sorted_vocab
-      if tokenizer:
-        vocab_list = _START_VOCAB + sorted_vocab
+
+      vocab_list = _START_VOCAB + sorted_vocab
       if len(vocab_list) > max_vocabulary_size:
         vocab_list = vocab_list[:max_vocabulary_size]
-      with tf.gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
+      with tf.gfile.GFile(vocab_path, mode="w") as vocab_file:
         for w in vocab_list:
-          vocab_file.write(w + b"\n")
+          vocab_file.write(str(w) + "\n")
 
 def initialize_vocabulary(vocabulary_path):
   """Initialize vocabulary from file.
@@ -240,8 +213,8 @@ def initialize_vocabulary(vocabulary_path):
   else:
     raise ValueError("Vocabulary file %s not found.", vocabulary_path)
 
-def sentence_to_token_ids_raw(sentence, vocabulary,
-                              tokenizer=None, normalize_digits=old_style):
+def sentence_to_token_ids(sentence, vocabulary, tokenizer,
+                          normalize_digits=old_style):
   """Convert a string to list of integers representing token-ids.
 
   For example, a sentence "I have a dog" may become tokenized into
@@ -258,43 +231,18 @@ def sentence_to_token_ids_raw(sentence, vocabulary,
   Returns:
     a list of integers, the token-ids for the sentence.
   """
-  if tokenizer:
-    words = tokenizer(sentence)
-  else:
-    words = basic_tokenizer(sentence)
+  words = tokenizer(sentence)
   result = []
   for w in words:
     if normalize_digits:
-      w = re.sub(_DIGIT_RE, b"0", w)
+      w = re.sub(_DIGIT_RE, "0", w)
     if w in vocabulary:
       result.append(vocabulary[w])
     else:
-      if tokenizer:
-        result.append(UNK_ID)
-      else:
-        result.append(SPACE_ID)
-        for c in w:
-          result.append(vocabulary.get(_CHAR_MARKER + c, UNK_ID))
-        result.append(SPACE_ID)
-  while result and result[0] == SPACE_ID:
-    result = result[1:]
-  while result and result[-1] == SPACE_ID:
-    result = result[:-1]
+      result.append(UNK_ID)
   return result
 
-def sentence_to_token_ids(sentence, vocabulary,
-                          tokenizer=None, normalize_digits=old_style):
-  """Convert a string to list of integers representing token-ids, tab=0."""
-  tab_parts = sentence.strip().split("\t")
-  toks = [sentence_to_token_ids_raw(t, vocabulary, tokenizer, normalize_digits)
-          for t in tab_parts]
-  res = []
-  for t in toks:
-    res.extend(t)
-    res.append(0)
-  return res[:-1]
-
-def data_to_token_ids(data_path, vocabulary_path, tokenizer=None,
+def data_to_token_ids(data_path, target_path, vocabulary_path, tokenizer,
                       normalize_digits=False):
   """Tokenize data file and turn into token-ids using given vocabulary file.
 
@@ -311,20 +259,20 @@ def data_to_token_ids(data_path, vocabulary_path, tokenizer=None,
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
   if not tf.gfile.Exists(target_path):
-    print("Tokenizing data in %s" % data_path)
+    tf.logging.info("Tokenizing data in %s" % data_path)
     vocab, _ = initialize_vocabulary(vocabulary_path)
-    with tf.gfile.GFile(data_path, mode="rb") as data_file:
+    with tf.gfile.GFile(data_path, mode="r") as data_file:
       with tf.gfile.GFile(target_path, mode="w") as tokens_file:
         counter = 0
         for line in data_file:
           counter += 1
           if counter % 100000 == 0:
-            print("  tokenizing line %d" % counter)
+            tf.logging.info("tokenizing line %d" % counter)
           token_ids = sentence_to_token_ids(line, vocab, tokenizer,
                                             normalize_digits)
           tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
 
-def prepare_wsd_data(data_dir, vocabulary_size,
+def prepare_ptb_data(data_dir, vocabulary_size,
                      tokenizer=None, normalize_digits=False):
   """ Create vocabularies and tokenize data.
 
@@ -342,24 +290,42 @@ def prepare_wsd_data(data_dir, vocabulary_size,
       (3) path to the vocabulary file,
   """
 
-  # Get wmt data to the specified directory.
-  # TODO: fix this
-  train_path = get_wmt_enfr_train_set(data_dir)
-  dev_path = get_wmt_enfr_dev_set(data_dir)
+  # Get ptb data to the specified directory.
+  train_path = get_ptb_train_set(data_dir)
+  tf.logging.info('PTB train set: {}'.format(train_path))
+  dev_path = get_ptb_dev_set(data_dir)
+  tf.logging.info("PTB dev set: {}".format(dev_path))
 
   # Create vocabularies of the appropriate sizes.
   vocab_path = os.path.join(data_dir, "vocab%d.txt" % vocabulary_size)
   create_vocabulary(vocab_path, train_path, vocabulary_size,
-                    tokenizer=tokenizer, normalize_digits=normalize_digits)
+                    tokenizer, normalize_digits=normalize_digits)
+  tf.logging.info('Vocabulary path: {}'.format(vocab_path))
 
   # Create token ids for the training data.
-  train_ids_path = train_path + ("%d.ids" % vocabulary_size)
-  data_to_token_ids(train_path + ".ids", train_ids_path, vocab_path,
-                    tokenizer=tokenizer, normalize_digits=normalize_digits)
+  train_ids_path = train_path + (".%d.ids" % vocabulary_size)
+  data_to_token_ids(train_path, train_ids_path, vocab_path,
+                    tokenizer, normalize_digits=normalize_digits)
+  tf.logging.info('PTB train ids path: {}'.format(train_ids_path))
 
   # Create token ids for the development data.
-  dev_ids_path = dev_path + ("%d.ids" % vocabulary_size)
-  data_to_token_ids(dev_path + ".ids", dev_ids_path, vocab_path,
-                    tokenizer=tokenizer, normalize_digits=normalize_digits)
+  dev_ids_path = dev_path + (".%d.ids" % vocabulary_size)
+  data_to_token_ids(dev_path, dev_ids_path, vocab_path,
+                    tokenizer, normalize_digits=normalize_digits)
+  tf.logging.info('PTB dev ids path: {}'.format(dev_ids_path))
 
   return (train_ids_path, dev_ids_path, vocab_path)
+
+class DataTest(tf.test.TestCase):
+  def test(self):
+    tmpdatadir = tf.test.get_temp_dir()
+    train_ids_path, dev_ids_path, vocab_path = prepare_ptb_data(tmpdatadir,
+                                                                10000,
+                                                                space_tokenizer)
+    tf.logging.info('train: {}'.format(train_ids_path))
+    tf.logging.info('valid: {}'.format(dev_ids_path))
+    tf.logging.info('vocab: {}'.format(vocab_path))
+
+if __name__ == "__main__":
+  tf.logging.set_verbosity(tf.logging.INFO)
+  tf.test.main()
