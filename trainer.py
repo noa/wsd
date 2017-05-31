@@ -26,6 +26,7 @@ import time
 import numpy as np
 import tensorflow as tf
 
+import model
 import data_utils as data
 import wsd_utils as wsd
 
@@ -63,6 +64,7 @@ tf.app.flags.DEFINE_string("master", "", "Name of the TensorFlow master.")
 
 FLAGS = tf.app.flags.FLAGS
 
+# Globals
 global_train_set = []
 train_buckets_scale = []
 
@@ -74,7 +76,11 @@ def read_data_into_global(source_path, target_path, buckets,
   # pylint: enable=global-variable-not-assigned
   data_set = wsd.read_data(source_path, buckets, max_size, print_out)
   global_train_set.append(data_set)
-  train_total_size = calculate_buckets_scale(data_set, buckets)
+  train_total_size, train_buckets_scale = data.calculate_buckets_scale(data_set,
+                                                                       buckets)
+  tf.logging.info("train_total_size: {}".format(train_total_size))
+  tf.logging.info("train_buckets_scale: {}".format(
+    ", ".format(train_buckets_scale)))
   if print_out:
     tf.logging.info("Finished global data reading ({}).".format(
       train_total_size))
@@ -85,8 +91,6 @@ def initialize(sess=None):
   if not tf.gfile.IsDirectory(FLAGS.train_dir):
     tf.logging.info("Creating training directory %s." % FLAGS.train_dir)
     tf.gfile.MkDir(FLAGS.train_dir)
-
-  decode_suffix = ""
 
   # Set random seed.
   if FLAGS.random_seed > 0:
@@ -113,6 +117,7 @@ def initialize(sess=None):
     normalize_digits=FLAGS.normalize_digits)
 
   # Read data into buckets and compute their sizes.
+  tf.logging.info("Initialize vocab: {}".format(train_ids_path))
   vocab, rev_vocab = wsd.initialize_vocabulary(train_ids_path)
   data.vocab = vocab
   data.rev_vocab = rev_vocab
@@ -209,7 +214,7 @@ def assign_vectors(word_vector_file, embedding_key, vocab_path, sess):
   if not tf.gfile.Exists(word_vector_file):
     data.print_out("Word vector file does not exist: %s" % word_vector_file)
     sys.exit(1)
-  vocab, _ = wmt.initialize_vocabulary(vocab_path)
+  vocab, _ = wsd.initialize_vocabulary(vocab_path)
   vectors_variable = [v for v in tf.trainable_variables()
                       if embedding_key == v.name]
   if len(vectors_variable) != 1:
@@ -233,6 +238,7 @@ def assign_vectors(word_vector_file, embedding_key, vocab_path, sess):
                                        len(word_vector)))
         else:
           vectors[vocab[word]] = word_vector
+
   # Assign the modified vectors to the vectors_variable in the graph.
   sess.run([vectors_variable.initializer],
            {vectors_variable.initializer.inputs[1]: vectors})
@@ -258,24 +264,6 @@ def print_vectors(embedding_key, vocab_path, word_vector_file):
         f.write(" %.8f" % vectors[i][j])
       f.write("\n")
 
-def get_bucket_id(train_buckets_scale_c, max_cur_length, data_set):
-  """Get a random bucket id."""
-  # Choose a bucket according to data distribution. Pick a random number
-  # in [0, 1] and use the corresponding interval in train_buckets_scale.
-  random_number_01 = np.random.random_sample()
-  bucket_id = min([i for i in xrange(len(train_buckets_scale_c))
-                   if train_buckets_scale_c[i] > random_number_01])
-  while bucket_id > 0 and not data_set[bucket_id]:
-    bucket_id -= 1
-  for _ in xrange(10 if np.random.random_sample() < 0.9 else 1):
-    if data.bins[bucket_id] > max_cur_length:
-      random_number_01 = min(random_number_01, np.random.random_sample())
-      bucket_id = min([i for i in xrange(len(train_buckets_scale_c))
-                       if train_buckets_scale_c[i] > random_number_01])
-      while bucket_id > 0 and not data_set[bucket_id]:
-        bucket_id -= 1
-  return bucket_id
-
 def train():
   """Train the model."""
   batch_size = FLAGS.batch_size
@@ -283,7 +271,6 @@ def train():
    (train_set, dev_set, vocab_path), sv, sess) = initialize()
 
   with sess.as_default():
-    quant_op = model.quantize_op
     max_cur_length = min(min_length + 3, max_length)
     prev_acc_perp = [1000000 for _ in xrange(5)]
     prev_seq_err = 1.0

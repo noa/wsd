@@ -25,17 +25,17 @@ from six.moves import urllib
 import tensorflow as tf
 
 # Special vocabulary symbols - we always put them at the start.
-_PAD = "_PAD"
+_PAD     = "_PAD"
 _HELDOUT = "_HELDOUT"
-_EOS = "_EOS"
-_UNK = "_CHAR_UNK"
-_SPACE = "_SPACE"
+_EOS     = "_EOS"
+_UNK     = "_CHAR_UNK"
+_SPACE   = "_SPACE"
 _START_VOCAB = [_PAD, _HELDOUT, _EOS, _UNK]
 
-PAD_ID = 0
+PAD_ID     = 0
 HELDOUT_ID = 1
-EOS_ID = 2
-UNK_ID = 3
+EOS_ID     = 2
+UNK_ID     = 3
 
 # Regular expressions used to tokenize.
 _CHAR_MARKER = "_CHAR_"
@@ -49,25 +49,7 @@ _DIGIT_RE = re.compile("\d")
 # Data locations
 _PTB_URL = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
 
-def calculate_buckets_scale(data_set, buckets):
-  """Calculate buckets scales for the given data set."""
-  train_bucket_sizes = [len(data_set[b]) for b in range(len(buckets))]
-  train_total_size = max(1, float(sum(train_bucket_sizes)))
 
-  train_buckets_scale.append(
-    [sum(train_bucket_sizes[:i + 1]) / train_total_size
-     for i in range(len(train_bucket_sizes))])
-
-  return train_total_size
-
-def initialize_bins(max_length):
-  bins = [2 + bin_idx_i for bin_idx_i in range(256)]
-  max_length = min(max_length, bins[-1])
-  while len(bins) > 1 and bins[-2] >= max_length:
-    bins = bins[:-1]
-  while len(bins) > 1 and bins[-2] >= max_length:
-    bins = bins[:-1]
-  return bins
 
 def read_data(source_path, buckets, max_size=None, print_out=True):
   """Read data from source and put into buckets.

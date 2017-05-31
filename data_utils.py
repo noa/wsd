@@ -137,16 +137,46 @@ def safe_exp(x):
   if perp > 10000: return 10000
   return perp
 
+def calculate_buckets_scale(data_set, buckets):
+  """Calculate buckets scales for the given data set."""
+  train_bucket_sizes = [len(data_set[b]) for b in range(len(buckets))]
+  train_total_size = max(1, float(sum(train_bucket_sizes)))
+  train_buckets_scale = [sum(train_bucket_sizes[:i + 1]) / train_total_size
+                         for i in range(len(train_bucket_sizes))]
+  return (train_total_size, train_buckets_scale)
+
+def get_bucket_id(train_buckets_scale_c, max_cur_length, bins, data_set):
+  """Get a random bucket id."""
+
+  # Choose a bucket according to data distribution. Pick a random number
+  # in [0, 1] and use the corresponding interval in train_buckets_scale.
+
+  random_number_01 = np.random.random_sample()
+  bucket_id = min([i for i in xrange(len(train_buckets_scale_c))
+                   if train_buckets_scale_c[i] > random_number_01])
+  while bucket_id > 0 and not data_set[bucket_id]:
+    bucket_id -= 1
+  for _ in xrange(10 if np.random.random_sample() < 0.9 else 1):
+    if bins[bucket_id] > max_cur_length:
+      random_number_01 = min(random_number_01, np.random.random_sample())
+      bucket_id = min([i for i in xrange(len(train_buckets_scale_c))
+                       if train_buckets_scale_c[i] > random_number_01])
+      while bucket_id > 0 and not data_set[bucket_id]:
+        bucket_id -= 1
+  return bucket_id
+
+def initialize_bins(max_length):
+  bins = [2 + bin_idx_i for bin_idx_i in range(256)]
+  max_length = min(max_length, bins[-1])
+  while len(bins) > 1 and bins[-2] >= max_length:
+    bins = bins[:-1]
+  while len(bins) > 1 and bins[-2] >= max_length:
+    bins = bins[:-1]
+  return bins
+
 class UtilTest(tf.test.TestCase):
-  def testBins(self):
-    assert data.bins
-    for max_len in [10, 20, 30, 40, 50]:
-      max_length = min(max_len, data.bins[-1])
-      while len(data.bins) > 1 and data.bins[-2] >= max_length + EXTRA_EVAL:
-        data.bins = data.bins[:-1]
-      assert max_length + 1 > min_length
-      while len(data.bins) > 1 and data.bins[-2] >= max_length + EXTRA_EVAL:
-        data.bins = data.bins[:-1]
+  def test(self):
+    return True
 
 if __name__ == "__main__":
   tf.logging.set_verbosity(tf.logging.INFO)
