@@ -49,6 +49,62 @@ _DIGIT_RE = re.compile("\d")
 # Data locations
 _PTB_URL = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
 
+def calculate_buckets_scale(data_set, buckets):
+  """Calculate buckets scales for the given data set."""
+  train_bucket_sizes = [len(data_set[b]) for b in xrange(len(buckets))]
+  train_total_size = max(1, float(sum(train_bucket_sizes)))
+
+  train_buckets_scale.append(
+    [sum(train_bucket_sizes[:i + 1]) / train_total_size
+     for i in xrange(len(train_bucket_sizes))])
+
+  return train_total_size
+
+def read_data(source_path, buckets, max_size=None, print_out=True):
+  """Read data from source and put into buckets.
+
+  Args:
+    source_path: path to the file with token-ids
+    buckets: the buckets to use.
+    max_size: maximum number of lines to read, all other will be ignored;
+      if 0 or None, data files will be read completely (no limit).
+      If set to 1, no data will be returned (empty lists of the right form).
+    print_out: whether to print out status or not.
+
+  Returns:
+    data_set: a list of length len(_buckets); data_set[n] contains a list of
+      (source, target) pairs read from the provided data files that fit
+      into the n-th bucket, i.e., such that len(source) < _buckets[n][0] and
+      len(target) < _buckets[n][1]; source and target are lists of token-ids.
+  """
+  data_set = [[] for _ in buckets]
+  counter = 0
+  if max_size != 1:
+    with tf.gfile.GFile(source_path, mode="r") as source_file:
+      source = source_file.readline()
+      while source and (not max_size or counter < max_size):
+        counter += 1
+        if counter % 100000 == 0 and print_out:
+          tf.logging.info("\treading data line {}".format(counter))
+        source_ids = [int(x) for x in source.split()]
+        source_ids, source_len = zero_split(source_ids)
+
+        ## Create instances
+        for i in range(len(source_ids)):
+          target = copy_source_ids[i]
+          if target in set([PAD_ID, HELDOUT_ID, EOS_ID, UNK_ID]):
+            continue
+          copy_source_ids = list(copy_source_ids)
+          copy_source_ids[i] = HELDOUT_ID
+          for bucket_id, size in enumerate(buckets):
+            if source_len <= size and target_len <= size:
+              data_set[bucket_id].append([source_ids, target_ids])
+              break
+
+        # Read the next line
+        source = source_file.readline()
+  return data_set
+
 def maybe_download(directory, filename, url):
   """Download filename from url unless it's already in directory."""
   if not tf.gfile.Exists(directory):
@@ -346,6 +402,8 @@ class DataTest(tf.test.TestCase):
     assert num_lines(train_ids_path) > 0
     assert num_lines(dev_ids_path) > 0
     assert num_lines(vocab_path) > 0
+
+    read_data(train_ids_path)
 
 if __name__ == "__main__":
   tf.logging.set_verbosity(tf.logging.INFO)
