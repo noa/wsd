@@ -96,17 +96,7 @@ def initialize(sess=None):
     np.random.seed(seed)
 
   # Check data sizes.
-  # TODO: figure this out
-  assert data.bins
-  max_length = min(FLAGS.max_length, data.bins[-1])
-  while len(data.bins) > 1 and data.bins[-2] >= max_length + EXTRA_EVAL:
-    data.bins = data.bins[:-1]
-  assert max_length + 1 > min_length
-  while len(data.bins) > 1 and data.bins[-2] >= max_length + EXTRA_EVAL:
-    data.bins = data.bins[:-1]
-
-  print("bins")
-  print(data.bins)
+  bins = initialize_bins(FLAGS.max_length)
 
   # Create checkpoint directory if it does not exist.
   checkpoint_dir = os.path.join(FLAGS.train_dir, 'ckpt')
@@ -130,7 +120,7 @@ def initialize(sess=None):
                   % FLAGS.max_train_data_size)
   dev_set = read_data(dev, data.bins)
   def data_read(size, print_out):
-    read_data_into_global(train, data.bins, size, print_out)
+    read_data_into_global(train, bins, size, print_out)
   data_read(50000, False)
   read_thread_small = threading.Thread(
     name="reading-data-small", target=lambda: data_read(900000, False))
@@ -151,21 +141,14 @@ def initialize(sess=None):
       tf.orthogonal_initializer(gain=1.8 * init_weight))
   max_sampling_rate = FLAGS.max_sampling_rate if FLAGS.mode == 0 else 0.0
   o = FLAGS.vocab_size if FLAGS.max_target_vocab < 1 else FLAGS.max_target_vocab
-  def make_ngpu(cur_beam_size, back):
-    return ngpu.NeuralGPU(
-        FLAGS.nmaps, FLAGS.vec_size, FLAGS.vocab_size, o,
-        FLAGS.dropout, max_grad_norm, FLAGS.cutoff, FLAGS.nconvs,
-        FLAGS.kw, FLAGS.kh, FLAGS.height, FLAGS.mem_size,
-        lr / math.sqrt(FLAGS.num_replicas), min_length + 3, FLAGS.num_gpus,
-        FLAGS.num_replicas, FLAGS.grad_noise_scale, max_sampling_rate,
-        atrous=FLAGS.atrous, do_rnn=FLAGS.rnn_baseline,
-        do_layer_norm=FLAGS.layer_norm, beam_size=cur_beam_size, backward=back)
+  def make_model(backward):
+    return model.BasicWSD(backward=backward)
 
   if sess is None:
     with tf.device(tf.train.replica_device_setter(FLAGS.ps_tasks)):
-      model = make_ngpu(beam_size, True)
+      model = make_model(True)
   else:
-    model = make_ngpu(beam_size, True)
+    model = make_model(True)
 
   sv = None
   if sess is None:
@@ -193,12 +176,11 @@ def initialize(sess=None):
     sess.run(tf.global_variables_initializer())
     tf.logging.info("Initialized variables (no supervisor mode).")
   elif FLAGS.task < 1 and FLAGS.mem_size > 0:
-    # sess.run(model.mem_norm_op)
     tf.logging.info("Created new model and normalized mem (on chief).")
 
   # Return the model and needed variables.
-  return (model, beam_model, min_length, max_length, checkpoint_dir,
-          (global_train_set, dev_set, en_path, fr_path), sv, sess)
+  return (model, max_length, checkpoint_dir,
+          (global_train_set, dev_set), sv, sess)
 
 def single_test(bin_id, model, sess, nprint, batch_size, dev, p, print_out=True,
                 offset=None, beam_model=None):
@@ -414,21 +396,6 @@ def train():
                tf.Summary.Value(tag="test/%s/perplexity" % p,
                                 simple_value=test_perp)])
           sv.SummaryComputed(sess, summary, global_step)
-
-def linearize(output, rev_fr_vocab, simple_tokenizer=None, eos_id=wmt.EOS_ID):
-  # If there is an EOS symbol in outputs, cut them at that point (WMT).
-  if eos_id in output:
-    output = output[:output.index(eos_id)]
-  # Print out French sentence corresponding to outputs.
-  if simple_tokenizer or FLAGS.simple_tokenizer:
-    vlen = len(rev_fr_vocab)
-    def vget(o):
-      if o < vlen:
-        return rev_fr_vocab[o]
-      return "UNK"
-    return " ".join([vget(o) for o in output])
-  else:
-    return wmt.basic_detokenizer([rev_fr_vocab[o] for o in output])
 
 def main(_):
   if FLAGS.mode == 0:

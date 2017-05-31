@@ -51,14 +51,23 @@ _PTB_URL = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
 
 def calculate_buckets_scale(data_set, buckets):
   """Calculate buckets scales for the given data set."""
-  train_bucket_sizes = [len(data_set[b]) for b in xrange(len(buckets))]
+  train_bucket_sizes = [len(data_set[b]) for b in range(len(buckets))]
   train_total_size = max(1, float(sum(train_bucket_sizes)))
 
   train_buckets_scale.append(
     [sum(train_bucket_sizes[:i + 1]) / train_total_size
-     for i in xrange(len(train_bucket_sizes))])
+     for i in range(len(train_bucket_sizes))])
 
   return train_total_size
+
+def initialize_bins(max_length):
+  bins = [2 + bin_idx_i for bin_idx_i in range(256)]
+  max_length = min(max_length, bins[-1])
+  while len(bins) > 1 and bins[-2] >= max_length:
+    bins = bins[:-1]
+  while len(bins) > 1 and bins[-2] >= max_length:
+    bins = bins[:-1]
+  return bins
 
 def read_data(source_path, buckets, max_size=None, print_out=True):
   """Read data from source and put into buckets.
@@ -87,7 +96,6 @@ def read_data(source_path, buckets, max_size=None, print_out=True):
         if counter % 100000 == 0 and print_out:
           tf.logging.info("\treading data line {}".format(counter))
         source_ids = [int(x) for x in source.split()]
-        source_ids, source_len = zero_split(source_ids)
 
         ## Create instances
         for i in range(len(source_ids)):
@@ -388,6 +396,14 @@ def num_lines(path):
     return ret
 
 class DataTest(tf.test.TestCase):
+  def testBins(self):
+    # Output:
+    # [2, 3, 4, 5, 6, 7, 8, 9, 10]
+    # [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    # Etc.
+    for max_len in [10, 20, 30, 40, 50]:
+      bins = initialize_bins(max_len)
+
   def test(self):
     tmpdatadir = tf.test.get_temp_dir()
     train_ids_path, dev_ids_path, vocab_path = prepare_ptb_data(
@@ -403,7 +419,8 @@ class DataTest(tf.test.TestCase):
     assert num_lines(dev_ids_path) > 0
     assert num_lines(vocab_path) > 0
 
-    read_data(train_ids_path)
+    # Create bins
+    #read_data(train_ids_path)
 
 if __name__ == "__main__":
   tf.logging.set_verbosity(tf.logging.INFO)

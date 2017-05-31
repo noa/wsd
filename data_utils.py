@@ -31,9 +31,6 @@ FLAGS = tf.app.flags.FLAGS
 
 vocab, rev_vocab = None, None
 
-def get_bins():
-  bins = [2 + bin_idx_i for bin_idx_i in xrange(256)]
-
 def pad(l):
   for b in bins:
     if b >= l: return b
