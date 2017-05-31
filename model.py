@@ -15,97 +15,140 @@
 # limitations under the License.
 # ==============================================================================
 
+# pylint: disable=unused-import,g-bad-import-order
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+# pylint: enable=unused-import
+
+import numpy as np
+import tensorflow as tf
+
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import array_ops
+from tensorflow.python.ops import nn_ops
+from tensorflow.python.ops import math_ops
+from tensorflow.contrib.rnn import GRUCell
+from tensorflow.contrib.rnn import LSTMCell
+
+def cross_entropy_loss(logits,
+                       targets,
+                       average_across_batch=True,
+                       softmax_loss_function=None,
+                       name=None):
+  with ops.name_scope(name, "cross_entropy_loss", [logits, targets]):
+    num_classes = array_ops.shape(logits)[-1]
+    batch_size  = array_ops.shape(logits)[0]
+    crossent    = None
+    if softmax_loss_function is None:
+      # A common use case is to have logits of shape
+      # [batch_size, num_classes] and labels of shape
+      # [batch_size]. But higher dimensions are supported.
+      crossent = nn_ops.sparse_softmax_cross_entropy_with_logits(
+        labels=targets,
+        logits=logits
+      )
+    else:
+      crossent = softmax_loss_function(logits, targets)
+    if average_across_batch:
+      return tf.reduce_mean(crossent)
+    return crossent
+
 class BasicWSD(object):
   def __init__(self, cfg, is_training=False):
-    # Placeholders
-    self._input = tf.placeholder(tf.int32, name="inp")
-    self._target = tf.placeholder(tf.int32, name="tgt")
+    if cfg.num_label < 1 or cfg.vocab_size < 1:
+      raise ValueError("must set num_label and vocab_size")
+    self._init_placeholders(is_training, cfg)
+    self._init_embeddings(is_training, cfg)
+    self._init_encoder(is_training, cfg)
+    self._init_decoder(is_training, cfg)
+    self._init_optimizer(is_training, cfg)
 
-    # Slightly better results can be obtained with forget gate biases
-    # initialized to 1 but the hyperparameters of the model would need to be
-    # different than reported in the paper.
-    def lstm_cell():
-      # With the latest TensorFlow source code (as of Mar 27, 2017),
-      # the BasicLSTMCell will need a reuse parameter which is unfortunately not
-      # defined in TensorFlow 1.0. To maintain backwards compatibility, we add
-      # an argument check here:
-      if 'reuse' in inspect.getargspec(
-          tf.contrib.rnn.BasicLSTMCell.__init__).args:
-        return tf.contrib.rnn.BasicLSTMCell(
-            size, forget_bias=0.0, state_is_tuple=True,
-            reuse=tf.get_variable_scope().reuse)
-      else:
-        return tf.contrib.rnn.BasicLSTMCell(
-            size, forget_bias=0.0, state_is_tuple=True)
-    attn_cell = lstm_cell
-    if is_training and cfg.keep_prob < 1:
-      def attn_cell():
-        return tf.contrib.rnn.DropoutWrapper(
-            lstm_cell(), output_keep_prob=cfg.keep_prob)
-    cell = tf.contrib.rnn.MultiRNNCell(
-        [attn_cell() for _ in range(cfg.num_layers)], state_is_tuple=True)
+  def _init_placeholders(self, is_training, cfg):
+    self._input_placeholder = tf.placeholder(tf.int32, name="input_placeholder")
+    self._target_placeholder = tf.placeholder(tf.int32,
+                                              name="target_placeholder")
 
-    self._initial_state = cell.zero_state(batch_size, data_type())
-
+  def _init_embeddings(self, is_training, cfg):
     with tf.device("/cpu:0"):
-      embedding = tf.get_variable(
-          "embedding", [cfg.vocab_size, size], dtype=data_type())
-      inputs = tf.nn.embedding_lookup(embedding, input_.input_data)
+      self._embedding = tf.get_variable(
+        "embedding", [cfg.vocab_size, cfg.embed_size], dtype=cfg.dtype)
+      self._input_embed = tf.nn.embedding_lookup(embedding,
+                                                 self._input_placeholder)
 
-    if is_training and cfg.keep_prob < 1:
-      inputs = tf.nn.dropout(inputs, cfg.keep_prob)
+  def _get_rnn_state(self, state):
+    if self._cell_type == 'lstm':
+      return state[-1].h
+    else:
+      return state[-1]
 
-    # Simplified version of models/tutorials/rnn/rnn.py's rnn().
-    # This builds an unrolled LSTM for tutorial purposes only.
-    # In general, use the rnn() or state_saving_rnn() from rnn.py.
-    #
-    # The alternative version of the code below is:
-    #
-    # inputs = tf.unstack(inputs, num=num_steps, axis=1)
-    # outputs, state = tf.nn.rnn(cell, inputs,
-    #                            initial_state=self._initial_state)
-    outputs = []
-    state = self._initial_state
-    with tf.variable_scope("RNN"):
-      for time_step in range(num_steps):
-        if time_step > 0: tf.get_variable_scope().reuse_variables()
-        (cell_output, state) = cell(inputs[:, time_step, :], state)
-        outputs.append(cell_output)
+  def _init_encoder(self, is_training, cfg):
+    assert self._input_embed != None, "call init_embeddings first"
+    with tf.variable_scope("encoder"):
+      cells = []
+      for l in range(cfg.num_layer):
+        if self._cell_type == 'lstm':
+          cell = core_rnn_cell_impl.BasicLSTMCell(cfg.hidden_size)
+        elif self._cell_type == 'gru':
+          cell = GRUCell(cfg.hidden_size)
+        else:
+          raise ValueError("unrecognized cell type: {}".format(self._cell_type))
+        if is_training:
+          cell = contrib_rnn.DropoutWrapper(cell, cfg.keep_prob)
+        cells += [ cell ]
 
-    output = tf.reshape(tf.concat(axis=1, values=outputs), [-1, size])
-    softmax_w = tf.get_variable(
-        "softmax_w", [size, vocab_size], dtype=data_type())
-    softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
-    logits = tf.matmul(output, softmax_w) + softmax_b
-    loss = tf.contrib.legacy_seq2seq.sequence_loss_by_example(
-        [logits],
-        [tf.reshape(input_.targets, [-1])],
-        [tf.ones([batch_size * num_steps], dtype=data_type())])
-    self._cost = cost = tf.reduce_sum(loss) / batch_size
-    self._final_state = state
+      self._encoder_cell = contrib_rnn.MultiRNNCell(cells)
 
-    # Anything below this point is for training only.
+      (rnn_outputs, rnn_state) = (
+        tf.nn.dynamic_rnn(cell=self._encoder_cell,
+                          inputs=self._input_embed,
+                          time_major=False,
+                          dtype=cfg.dtype)
+      )
+
+      final_state = self._get_rnn_state(rnn_state)
+      final_state_size = cfg.hidden_size
+      self._code_size = final_state_size
+      self._codes = final_state
+
+  def _init_decoder(self, is_training, cfg):
+    assert self._codes != None, "call init_encoder first"
+    with tf.variable_scope("decoder"):
+      with tf.variable_scope('softmax'):
+        W = tf.get_variable('W', [self._code_size, cfg.num_label])
+        b = tf.get_variable('b', [cfg.num_label],
+                            initializer=tf.constant_initializer(0.0))
+      self._decoder_logits = tf.matmul(self._codes, W) + b
+      self._decoder_predict = tf.argmax(self._decoder_logits,
+                                        axis=-1,
+                                        name='decoder_prediction_train')
+      self._loss = cross_entropy_loss(logits=self._decoder_logits,
+                                      targets=self._targets)
+
+  def _init_optimizer(self, is_training, cfg):
     if not is_training:
       return
-
-    self._global_step = tf.contrib.framework.get_or_create_global_step()
-    self._lr = tf.Variable(0.0, trainable=False)
-    self._lr_decay_op = self._lr.assign(self._lr * 0.995)
+    assert self._decoder_logits != None, "call init_decoder first"
+    self._lr = tf.Variable(cfg.learning_rate, trainable=False,
+                           name="learning_rate")
     tvars = tf.trainable_variables()
-    grads, _ = tf.clip_by_global_norm(tf.gradients(cost, tvars),
-                                      cfg.max_grad_norm)
-    optimizer = tf.train.AdamOptimizer(self._lr)
-    self._train_op = optimizer.apply_gradients(
-        zip(grads, tvars),
-        global_step=self._global_step)
+    grads, _ = tf.clip_by_global_norm(tf.gradients(self._loss, tvars),
+                                      cfg.grad_clip)
+    optimizer = None
+    if cfg.optimizer == 'sgd':
+      optimizer = tf.train.GradientDescentOptimizer(self._lr)
+    elif cfg.optimizer == 'adam':
+      optimizer = tf.train.AdamOptimizer(self._lr)
+    else:
+      raise ValueError('unsupported optimizer: {}'.format(cfg.optimizer))
+    self._train_op = optimizer.apply_gradients(zip(grads, tvars))
     self._new_lr = tf.placeholder(
-        tf.float32, shape=[], name="new_learning_rate")
+      tf.float32, shape=[], name="new_learning_rate")
     self._lr_update = tf.assign(self._lr, self._new_lr)
-    self._saver = tf.train.Saver(tf.global_variables(), cfg.max_to_keep=10)
 
   def step(self, sess, inp, target, eval_op=None, verbose=False):
     """Run a step of the network."""
-    batch_size, height, length = inp.shape[0], inp.shape[1], inp.shape[2]
+    batch_size, length = inp.shape[0], inp.shape[1]
     train_mode = True
     fetches = {
       "cost": model.cost
@@ -113,8 +156,8 @@ class BasicWSD(object):
     if eval_op is not None:
       fetches["eval_op"] = eval_op
     feed_dict = {}
-    feed_dict[self._input.name] = inp
-    feed_dict[self._target.name] = target
+    feed_dict[self._input_placeholder.name] = inp
+    feed_dict[self._target_placeholder.name] = target
     vals = sess.run(fetches, feed_dict)
     return vals
 
@@ -128,6 +171,10 @@ class BasicWSD(object):
   @property
   def cur_length(self):
     return self._cur_length
+
+  @property
+  def train_op(self):
+    return self._train_op
 
   @property
   def lr(self):
