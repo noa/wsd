@@ -23,6 +23,7 @@ import tarfile
 
 from six.moves import urllib
 import tensorflow as tf
+import data_utils
 
 # Special vocabulary symbols - we always put them at the start.
 _PAD     = "_PAD"
@@ -49,9 +50,7 @@ _DIGIT_RE = re.compile("\d")
 # Data locations
 _PTB_URL = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
 
-
-
-def read_data(source_path, buckets, max_size=None, print_out=True):
+def read_data(source_path, buckets, print_out=True):
   """Read data from source and put into buckets.
 
   Args:
@@ -68,31 +67,36 @@ def read_data(source_path, buckets, max_size=None, print_out=True):
       into the n-th bucket, i.e., such that len(source) < _buckets[n][0] and
       len(target) < _buckets[n][1]; source and target are lists of token-ids.
   """
+  tf.logging.info("[read_data] {}".format(source_path))
   data_set = [[] for _ in buckets]
   counter = 0
-  if max_size != 1:
-    with tf.gfile.GFile(source_path, mode="r") as source_file:
+  ntotal = 0
+  nlines = 0
+  nskipped = 0
+  tf.logging.info('reading: {}'.format(source_path))
+  with tf.gfile.GFile(source_path, mode="r") as source_file:
+    source = source_file.readline()
+    while source:
+      counter += 1
+      if counter % 10000 == 0 and print_out:
+        tf.logging.info("\treading data line {}".format(counter))
+      source_ids = [int(x) for x in source.split()]
+      for i in range(len(source_ids)):
+        copy_source_ids = list(source_ids)
+        target_id = copy_source_ids[i]
+        if target_id in set([PAD_ID, HELDOUT_ID, EOS_ID, UNK_ID]):
+          continue
+        copy_source_ids[i] = HELDOUT_ID
+        source_len = len(copy_source_ids)
+        for bucket_id, size in enumerate(buckets):
+          if source_len <= size:
+            data_set[bucket_id].append([copy_source_ids, target_id])
+            ntotal += 1
+            break
+        nskipped += 1
       source = source_file.readline()
-      while source and (not max_size or counter < max_size):
-        counter += 1
-        if counter % 100000 == 0 and print_out:
-          tf.logging.info("\treading data line {}".format(counter))
-        source_ids = [int(x) for x in source.split()]
-
-        ## Create instances
-        for i in range(len(source_ids)):
-          target = copy_source_ids[i]
-          if target in set([PAD_ID, HELDOUT_ID, EOS_ID, UNK_ID]):
-            continue
-          copy_source_ids = list(copy_source_ids)
-          copy_source_ids[i] = HELDOUT_ID
-          for bucket_id, size in enumerate(buckets):
-            if source_len <= size and target_len <= size:
-              data_set[bucket_id].append([source_ids, target_ids])
-              break
-
-        # Read the next line
-        source = source_file.readline()
+  tf.logging.info('nlines {}, ntotal {}, nskipped {}'.format(counter, ntotal,
+                                                             nskipped))
   return data_set
 
 def maybe_download(directory, filename, url):
@@ -105,8 +109,9 @@ def maybe_download(directory, filename, url):
     tf.logging.info("Downloading %s to %s" % (url, filepath))
     filepath, _ = urllib.request.urlretrieve(url, filepath)
     statinfo = os.stat(filepath)
-    tf.logging.info("Successfully downloaded", filename, statinfo.st_size,
-                    "bytes")
+    tf.logging.info("Successfully downloaded: {}".format(filename))
+    #tf.logging.info("Successfully downloaded", filename, statinfo.st_size,
+    #                "bytes")
   return filepath
 
 def get_ptb_train_set(directory):
@@ -184,7 +189,8 @@ def space_tokenizer(sentence):
   return sentence.strip().split()
 
 def create_vocabulary(vocab_path, data_path, tokenizer,
-                      max_vocabulary_size=None, normalize_digits=False):
+                      max_vocabulary_size=None, normalize_digits=False,
+                      force=False):
   """Create vocabulary file from data file.
 
   Data file is assumed to contain one sentence per line. Each sentence is
@@ -201,8 +207,7 @@ def create_vocabulary(vocab_path, data_path, tokenizer,
       if None, basic_tokenizer will be used.
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
-  #if not tf.gfile.Exists(vocab_path):
-  if True:
+  if not tf.gfile.Exists(vocab_path) or force:
     tf.logging.info("Creating vocabulary {} from data {}".format(vocab_path,
                                                                  data_path))
     vocab = {}
@@ -211,8 +216,8 @@ def create_vocabulary(vocab_path, data_path, tokenizer,
       for line_in in f:
         line = " ".join(line_in.split())
         counter += 1
-        if counter % 100000 == 0:
-          tf.logging.info("processing en line %d" % counter)
+        if counter % 10000 == 0:
+          tf.logging.info("processing line {}".format(counter))
 
         tokens = tokenizer(line)
         for w in tokens:
@@ -257,7 +262,7 @@ def initialize_vocabulary(vocabulary_path):
   """
   if tf.gfile.Exists(vocabulary_path):
     rev_vocab = []
-    with tf.gfile.GFile(vocabulary_path, mode="rb") as f:
+    with tf.gfile.GFile(vocabulary_path, mode="r") as f:
       rev_vocab.extend(f.readlines())
     rev_vocab = [line.strip() for line in rev_vocab]
     vocab = dict([(x, y) for (y, x) in enumerate(rev_vocab)])
@@ -295,7 +300,7 @@ def sentence_to_token_ids(sentence, vocabulary, tokenizer,
   return result
 
 def data_to_token_ids(data_path, target_path, vocabulary_path, tokenizer,
-                      normalize_digits=False):
+                      normalize_digits=False, force=False):
   """Tokenize data file and turn into token-ids using given vocabulary file.
 
   This function loads data line-by-line from data_path, calls the above
@@ -310,15 +315,16 @@ def data_to_token_ids(data_path, target_path, vocabulary_path, tokenizer,
       if None, basic_tokenizer will be used.
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
-  if not tf.gfile.Exists(target_path):
+  if not tf.gfile.Exists(target_path) or force:
     tf.logging.info("Tokenizing data in %s" % data_path)
     vocab, _ = initialize_vocabulary(vocabulary_path)
+    tf.logging.info("{} entries in vocabulary".format(len(vocab)))
     with tf.gfile.GFile(data_path, mode="r") as data_file:
       with tf.gfile.GFile(target_path, mode="w") as tokens_file:
         counter = 0
         for line in data_file:
           counter += 1
-          if counter % 100000 == 0:
+          if counter % 10000 == 0:
             tf.logging.info("tokenizing line %d" % counter)
           token_ids = sentence_to_token_ids(line, vocab, tokenizer,
                                             normalize_digits)
@@ -326,7 +332,8 @@ def data_to_token_ids(data_path, target_path, vocabulary_path, tokenizer,
 
 def prepare_ptb_data(data_dir, tokenizer,
                      vocabulary_size=100000,
-                     normalize_digits=False):
+                     normalize_digits=False,
+                     force=False):
   """ Create vocabularies and tokenize data.
 
   Args:
@@ -350,22 +357,25 @@ def prepare_ptb_data(data_dir, tokenizer,
   tf.logging.info("PTB dev set: {}".format(dev_path))
 
   # Create vocabularies of the appropriate sizes.
-  vocab_path = os.path.join(data_dir, "vocab%d.txt" % vocabulary_size)
+  vocab_path = os.path.join(data_dir, "vocab.{}.txt".format(vocabulary_size))
   create_vocabulary(vocab_path, train_path, tokenizer,
                     max_vocabulary_size=vocabulary_size,
-                    normalize_digits=normalize_digits)
+                    normalize_digits=normalize_digits,
+                    force=force)
   tf.logging.info('Vocabulary path: {}'.format(vocab_path))
 
   # Create token ids for the training data.
   train_ids_path = train_path + (".%d.ids" % vocabulary_size)
   data_to_token_ids(train_path, train_ids_path, vocab_path,
-                    tokenizer, normalize_digits=normalize_digits)
+                    tokenizer, normalize_digits=normalize_digits,
+                    force=force)
   tf.logging.info('PTB train ids path: {}'.format(train_ids_path))
 
   # Create token ids for the development data.
   dev_ids_path = dev_path + (".%d.ids" % vocabulary_size)
   data_to_token_ids(dev_path, dev_ids_path, vocab_path,
-                    tokenizer, normalize_digits=normalize_digits)
+                    tokenizer, normalize_digits=normalize_digits,
+                    force=force)
   tf.logging.info('PTB dev ids path: {}'.format(dev_ids_path))
 
   return (train_ids_path, dev_ids_path, vocab_path)
@@ -378,20 +388,13 @@ def num_lines(path):
     return ret
 
 class DataTest(tf.test.TestCase):
-  def testBins(self):
-    # Output:
-    # [2, 3, 4, 5, 6, 7, 8, 9, 10]
-    # [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-    # Etc.
-    for max_len in [10, 20, 30, 40, 50]:
-      bins = initialize_bins(max_len)
-
   def test(self):
     tmpdatadir = tf.test.get_temp_dir()
     train_ids_path, dev_ids_path, vocab_path = prepare_ptb_data(
       tmpdatadir,
       space_tokenizer,
-      vocabulary_size=9000)
+      vocabulary_size=9000,
+      force=True)
 
     tf.logging.info('train: {}'.format(train_ids_path))
     tf.logging.info('valid: {}'.format(dev_ids_path))
@@ -402,7 +405,25 @@ class DataTest(tf.test.TestCase):
     assert num_lines(vocab_path) > 0
 
     # Create bins
-    #read_data(train_ids_path)
+    max_size = 10
+    tf.logging.info('max size: {}'.format(max_size))
+    buckets = data_utils.initialize_bins(max_size)
+    print('buckets:')
+    print(buckets)
+    print('buckets type: {}'.format(type(buckets)))
+    data_set = read_data(train_ids_path, buckets, True)
+    total_size = 0
+    data_set_len = len(data_set)
+    tf.logging.info('data set num buckets: {}'.format(data_set_len))
+    print(data_set)
+    for i in range(len(data_set)):
+      item = data_set[i]
+      print(item)
+      total_size += len(item[0])
+    tf.logging.info('total size: {}'.format(total_size))
+    bucket_scale = data_utils.calculate_buckets_scale(data_set, buckets)
+    print('bucket scale:')
+    print(bucket_scale)
 
 if __name__ == "__main__":
   tf.logging.set_verbosity(tf.logging.INFO)

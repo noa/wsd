@@ -25,11 +25,7 @@ import time
 import numpy as np
 import tensorflow as tf
 
-import program_utils
-
 FLAGS = tf.app.flags.FLAGS
-
-vocab, rev_vocab = None, None
 
 def pad(l):
   for b in bins:
@@ -41,11 +37,9 @@ def bin_for(l):
     if b >= l: return i
   return len(bins) - 1
 
-def get_batch(bin_id, batch_size, data_set, height, offset=None, preset=None):
+def get_batch(bin_id, batch_size, data_set, offset=None, preset=None):
   """Get a batch of data, training or testing. This assumes data_set is
-  already split into bins.
-
-  """
+  already split into bins and bin_id is the selected bin."""
 
   inputs, targets = [], []
   pad_length = bins[bin_id]
