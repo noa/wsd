@@ -39,7 +39,9 @@ def bin_for(l):
 
 def get_batch(bin_id, batch_size, data_set, offset=None, preset=None):
   """Get a batch of data, training or testing. This assumes data_set is
-  already split into bins and bin_id is the selected bin."""
+  already split into bins and bin_id is the selected bin.
+
+  """
 
   inputs, targets = [], []
   pad_length = bins[bin_id]
@@ -71,6 +73,7 @@ def decode(output):
 
 def accuracy(inpt_t, output, target_t, batch_size, nprint,
              beam_out=None, beam_scores=None):
+
   """Calculate output accuracy given target."""
   assert nprint < batch_size + 1
   inpt = []

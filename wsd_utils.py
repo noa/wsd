@@ -405,7 +405,7 @@ class DataTest(tf.test.TestCase):
     assert num_lines(vocab_path) > 0
 
     # Create bins
-    max_size = 10
+    max_size = 25 # maximum sequence length
     tf.logging.info('max size: {}'.format(max_size))
     buckets = data_utils.initialize_bins(max_size)
     print('buckets:')
@@ -415,10 +415,8 @@ class DataTest(tf.test.TestCase):
     total_size = 0
     data_set_len = len(data_set)
     tf.logging.info('data set num buckets: {}'.format(data_set_len))
-    print(data_set)
     for i in range(len(data_set)):
       item = data_set[i]
-      print(item)
       total_size += len(item[0])
     tf.logging.info('total size: {}'.format(total_size))
     bucket_scale = data_utils.calculate_buckets_scale(data_set, buckets)
