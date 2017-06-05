@@ -34,8 +34,6 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('input_path', None, 'Path to read instances from.')
 flags.DEFINE_string('output_path', None, 'Path to write TF records to.')
 
-Data = collections.namedtuple('Data', 'sequences labels')
-
 def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 

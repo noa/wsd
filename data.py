@@ -26,6 +26,8 @@ from record_io import write_records
 from data_reader import examples_queue
 from data_reader import batch_examples
 
+DataSet = collections.namedtuple('Data', 'sequences labels')
+
 def _enc(s,d):
   if not (s in d):
     d[s] = len(d)

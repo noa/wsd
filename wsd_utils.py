@@ -20,17 +20,14 @@ import gzip
 import os
 import re
 import tarfile
-
 from six.moves import urllib
 import tensorflow as tf
-import data_utils
 
 # Special vocabulary symbols - we always put them at the start.
 _PAD     = "_PAD"
 _HELDOUT = "_HELDOUT"
 _EOS     = "_EOS"
-_UNK     = "_CHAR_UNK"
-_SPACE   = "_SPACE"
+_UNK     = "_UNK"
 _START_VOCAB = [_PAD, _HELDOUT, _EOS, _UNK]
 
 PAD_ID     = 0
@@ -50,36 +47,16 @@ _DIGIT_RE = re.compile("\d")
 # Data locations
 _PTB_URL = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
 
-def read_data(source_path, buckets, print_out=True):
-  """Read data from source and put into buckets.
-
-  Args:
-    source_path: path to the file with token-ids
-    buckets: the buckets to use.
-    max_size: maximum number of lines to read, all other will be ignored;
-      if 0 or None, data files will be read completely (no limit).
-      If set to 1, no data will be returned (empty lists of the right form).
-    print_out: whether to print out status or not.
-
-  Returns:
-    data_set: a list of length len(_buckets); data_set[n] contains a list of
-      (source, target) pairs read from the provided data files that fit
-      into the n-th bucket, i.e., such that len(source) < _buckets[n][0] and
-      len(target) < _buckets[n][1]; source and target are lists of token-ids.
-  """
-  tf.logging.info("[read_data] {}".format(source_path))
-  data_set = [[] for _ in buckets]
-  counter = 0
-  ntotal = 0
+def example_generator(source_path, max_examples=None):
+  ninstances = 0
   nlines = 0
-  nskipped = 0
   tf.logging.info('reading: {}'.format(source_path))
   with tf.gfile.GFile(source_path, mode="r") as source_file:
     source = source_file.readline()
     while source:
-      counter += 1
-      if counter % 10000 == 0 and print_out:
-        tf.logging.info("\treading data line {}".format(counter))
+      nlines += 1
+      if nlines % 10000 == 0:
+        tf.logging.info("\treading data line {}".format(nlines))
       source_ids = [int(x) for x in source.split()]
       for i in range(len(source_ids)):
         copy_source_ids = list(source_ids)
@@ -87,17 +64,11 @@ def read_data(source_path, buckets, print_out=True):
         if target_id in set([PAD_ID, HELDOUT_ID, EOS_ID, UNK_ID]):
           continue
         copy_source_ids[i] = HELDOUT_ID
-        source_len = len(copy_source_ids)
-        for bucket_id, size in enumerate(buckets):
-          if source_len <= size:
-            data_set[bucket_id].append([copy_source_ids, target_id])
-            ntotal += 1
-            break
-        nskipped += 1
+        ninstances += 1
+        yield (copy_source_ids, target_id)
+      if max_examples and nexamples > max_examples:
+        return
       source = source_file.readline()
-  tf.logging.info('nlines {}, ntotal {}, nskipped {}'.format(counter, ntotal,
-                                                             nskipped))
-  return data_set
 
 def maybe_download(directory, filename, url):
   """Download filename from url unless it's already in directory."""
@@ -349,6 +320,8 @@ def prepare_ptb_data(data_dir, tokenizer,
       (2) path to the token-ids for development data-set,
       (3) path to the vocabulary file,
   """
+  if not vocabulary_size:
+    raise ValueError('must provide maximum vocabulary size')
 
   # Get ptb data to the specified directory.
   train_path = get_ptb_train_set(data_dir)
@@ -393,7 +366,6 @@ class DataTest(tf.test.TestCase):
     train_ids_path, dev_ids_path, vocab_path = prepare_ptb_data(
       tmpdatadir,
       space_tokenizer,
-      vocabulary_size=9000,
       force=True)
 
     tf.logging.info('train: {}'.format(train_ids_path))
@@ -404,24 +376,12 @@ class DataTest(tf.test.TestCase):
     assert num_lines(dev_ids_path) > 0
     assert num_lines(vocab_path) > 0
 
-    # Create bins
-    max_size = 25 # maximum sequence length
-    tf.logging.info('max size: {}'.format(max_size))
-    buckets = data_utils.initialize_bins(max_size)
-    print('buckets:')
-    print(buckets)
-    print('buckets type: {}'.format(type(buckets)))
-    data_set = read_data(train_ids_path, buckets, True)
-    total_size = 0
-    data_set_len = len(data_set)
-    tf.logging.info('data set num buckets: {}'.format(data_set_len))
-    for i in range(len(data_set)):
-      item = data_set[i]
-      total_size += len(item[0])
-    tf.logging.info('total size: {}'.format(total_size))
-    bucket_scale = data_utils.calculate_buckets_scale(data_set, buckets)
-    print('bucket scale:')
-    print(bucket_scale)
+    dataset = example_generator(train_ids_path)
+    nex = 0
+    for ex in dataset:
+      nex += 1
+
+    tf.logging.info('{} examples'.format(nex))
 
 if __name__ == "__main__":
   tf.logging.set_verbosity(tf.logging.INFO)
