@@ -21,6 +21,11 @@ import collections
 import numpy as np
 import tensorflow as tf
 
+from record_io import write_records
+
+from data_reader import examples_queue
+from data_reader import batch_examples
+
 def _enc(s,d):
   if not (s in d):
     d[s] = len(d)
@@ -124,12 +129,28 @@ def instances_to_tensors(instances, dtype=np.int32):
       inputs[i][j] = seq[j]
   return (inputs, lens, labels)
 
-BatchQueueConfig = collections.namedtuple('ExampleQueue', )
-
 class BatchQueue(object):
-  def __init__(self, cfg, name=None):
-    
-                                      
+  def __init__(self, examples, batch_size, is_training, name=None):
+    record_path = path + '.tfrecords'
+    tf.logging.info('Writing TF records to: {}'.format(record_path))
+    write_records(examples, record_path)
+    self._record_path = record_path
+    queue = examples_queue(
+      data_sources=record_path,
+      data_fields_to_features={
+        'sequence': tf.VarLenFeature(tf.int64),
+        'label': tf.FixedLenFeature(tf.int64)
+      },
+      training=is_training
+    )
+    self._batch = batch_examples(queue, batch_size)
+
+  def init(self):
+    return
+
+  @property
+  def batch(self):
+    return self._batch
 
 InMemoryBatchQueueConfig = collections.namedtuple('InMemoryBatchQueueConfig',
                                                   'batch_size num_example max_len')

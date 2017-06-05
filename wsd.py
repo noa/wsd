@@ -30,8 +30,8 @@ from tqdm import tqdm
 
 from data import instances_to_tensors
 from data import prepare
-from data import InMemoryBatchQueueConfig
-from data import InMemoryBatchQueue
+from data import BatchQueue
+
 from rnn_classifier import RNNClassifierConfig
 from rnn_classifier import RNNClassifier
 
@@ -59,12 +59,8 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
   'embed_size', 128, 'Input symbol embedding size')
 
-def get_input_queue(batch_size, examples, name=None):
-  tensors = instances_to_tensors(examples)
-  cfg = InMemoryBatchQueueConfig(batch_size=batch_size,
-                                 num_example=tensors[0].shape[0],
-                                 max_len=tensors[0].shape[1])
-  return (InMemoryBatchQueue(cfg, name=name), tensors)
+def get_input_queue(batch_size, examples, is_training, name=None):
+  return BatchQueue(examples, batch_size, is_training, name=name)
 
 def run_epoch(sess, model, eval_op=None, verbose=False):
   tic = timer()
@@ -93,8 +89,7 @@ def run_epoch(sess, model, eval_op=None, verbose=False):
 def train(train_examples, valid_examples, model_config, max_epoch,
           batch_size, save_path = None):
   with tf.name_scope("Train"):
-    train_queue, train_data = get_input_queue(batch_size, train_examples,
-                                              name="TrainInput")
+    train_queue = get_input_queue(batch_size, train_examples, name="TrainInput")
     with tf.variable_scope("Model", reuse=None):
       m = RNNClassifier(model_config, train_queue, is_training=True)
 
@@ -102,8 +97,7 @@ def train(train_examples, valid_examples, model_config, max_epoch,
   tf.summary.scalar("Learning Rate", m.lr)
 
   with tf.name_scope("Valid"):
-    valid_queue, valid_data = get_input_queue(batch_size, valid_examples,
-                                              name="ValidInput")
+    valid_queue = get_input_queue(batch_size, valid_examples, name="ValidInput")
     with tf.variable_scope("Model", reuse=True):
       mvalid = RNNClassifier(model_config, valid_queue, is_training=False)
 
