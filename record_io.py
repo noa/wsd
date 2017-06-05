@@ -31,22 +31,15 @@ from tensorflow.core.example import example_pb2
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('input_path', None, 'Path to read instances from.')
-flags.DEFINE_string('output_path', None, 'Path to write TF records to.')
-
 def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 def _int64_list_feature(values):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=values))
 
-def write_records(data, path):
-    sequences = data.sequences
-    labels = data.labels
+def write_records(examples, path):
     writer = tf.python_io.TFRecordWriter(path)
-    for index in range(len(labels)):
-        sequence = sequences[index]
-        label = labels[index]
+    for sequence, label in examples:
         example = tf.train.Example(features=tf.train.Features(feature={
             'sequence': _int64_list_feature(sequence),
             'label': _int64_feature(label)}))
@@ -54,30 +47,9 @@ def write_records(data, path):
     writer.close()
 
 def read_records(path):
-    dataset = Data([], [])
     it =  tf.python_io.tf_record_iterator(path)
     for ex_str in it:
         ex = example_pb2.Example.FromString(ex_str)
-        dataset.labels.append(ex.features.feature['label'].int64_list.value[0])
-        dataset.sequences.append(ex.features.feature['sequence'].int64_list.value)
-    return dataset
-
-def main(unused_argv):
-    # Get the data.
-    sequences = [
-        [1, 1, 1],
-        [2, 2, 2, 2, 2],
-        [3, 3],
-        [4]
-    ]
-    labels = [1, 2, 3, 4]
-    dataset = Data(sequences, labels)
-
-    # Convert to Examples and write the result to TFRecords.
-    write_records(dataset, 'dataset.tfrecords')
-    result = read_records('dataset.tfrecords')
-
-    assert result == dataset
-
-if __name__ == '__main__':
-  tf.app.run()
+        sequence = ex.features.feature['sequence'].int64_list.value
+        label = ex.features.feature['label'].int64_list.value[0]
+        yield (sequence, label)

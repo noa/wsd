@@ -59,7 +59,7 @@ def example_generator(source_path, max_examples=None):
         tf.logging.info("\treading data line {}".format(nlines))
       source_ids = [int(x) for x in source.split()]
       for i in range(len(source_ids)):
-        copy_source_ids = list(source_ids)
+        copy_source_ids = list(source_ids) + [EOS_ID]
         target_id = copy_source_ids[i]
         if target_id in set([PAD_ID, HELDOUT_ID, EOS_ID, UNK_ID]):
           continue

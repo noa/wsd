@@ -14,6 +14,8 @@
 # limitations under the License.
 # ==============================================================================
 
+import tensorflow as tf
+
 def examples_queue(data_sources, data_fields_to_features, training,
                    data_items_to_decoders=None, data_items_to_decode=None):
   """Contruct a queue of training or evaluation examples.
@@ -126,11 +128,11 @@ def batch_examples(examples, batch_size, bucket_boundaries=None):
   # Create default buckets if none were provided.
   if bucket_boundaries is None:
     # Small buckets -- go in steps of 8 until 64.
-    small_buckets = [8 * (i + 1) for i in xrange(8)]
+    small_buckets = [8 * (i + 1) for i in range(8)]
     # Medium buckets -- go in steps of 32 until 256.
-    medium_buckets = [32 * (i + 3) for i in xrange(6)]
+    medium_buckets = [32 * (i + 3) for i in range(6)]
     # Large buckets -- go in steps of 128 until maximum of 1024.
-    large_buckets = [128 * (i + 3) for i in xrange(6)]
+    large_buckets = [128 * (i + 3) for i in range(6)]
     # By default use the above 20 bucket boundaries (21 queues in total).
     bucket_boundaries = small_buckets + medium_buckets + large_buckets
   with tf.name_scope("batch_examples"):

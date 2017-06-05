@@ -26,7 +26,9 @@ from record_io import write_records
 from data_reader import examples_queue
 from data_reader import batch_examples
 
-DataSet = collections.namedtuple('Data', 'sequences labels')
+from wsd_utils import prepare_ptb_data
+from wsd_utils import example_generator
+from wsd_utils import space_tokenizer
 
 def _enc(s,d):
   if not (s in d):
@@ -62,14 +64,15 @@ def _encode_line(line, syms, tags, eos=None, sep="\t", space_str=None,
 def ingest(path, syms, tags, eos=None, max_examples=0, space_str=None,
            split_by_words=False):
   instances = []
-  for line in open(path):
-    instances.append(_encode_line(line, syms, tags, eos=eos,
-                                  space_str=space_str,
-                                  split_by_words=split_by_words))
-    if max_examples > 0 and len(instances) == max_examples:
-      break
-  random.shuffle(instances)
-  return instances
+  with open(path) as f:
+    for line in f:
+      instances.append(_encode_line(line, syms, tags, eos=eos,
+                                    space_str=space_str,
+                                    split_by_words=split_by_words))
+      if max_examples > 0 and len(instances) == max_examples:
+        break
+    random.shuffle(instances)
+    return instances
 
 def get_random_batch(instances, batch_size):
   inputs = []
@@ -131,24 +134,21 @@ def instances_to_tensors(instances, dtype=np.int32):
       inputs[i][j] = seq[j]
   return (inputs, lens, labels)
 
-class BatchQueue(object):
-  def __init__(self, examples, batch_size, is_training, name=None):
-    record_path = path + '.tfrecords'
+class BucketedBatchQueue(object):
+  def __init__(self, raw_path, batch_size, is_training, name=None):
+    record_path = raw_path + '.tfrecords'
     tf.logging.info('Writing TF records to: {}'.format(record_path))
-    write_records(examples, record_path)
-    self._record_path = record_path
+    g = example_generator(raw_path)
+    write_records(g, record_path)
     queue = examples_queue(
       data_sources=record_path,
       data_fields_to_features={
         'sequence': tf.VarLenFeature(tf.int64),
-        'label': tf.FixedLenFeature(tf.int64)
+        'label': tf.FixedLenFeature([1], tf.int64)
       },
       training=is_training
     )
     self._batch = batch_examples(queue, batch_size)
-
-  def init(self):
-    return
 
   @property
   def batch(self):
@@ -252,26 +252,54 @@ class DataTest(tf.test.TestCase):
         else:
           assert val == 0
 
-  def testProducer(self):
-    trainpath, testpath = self.write_data()
-    train, _, _, _ = prepare(trainpath, testpath)
-    train_inputs = instances_to_tensors(train)
-    xd = train_inputs[0].shape[0]
-    yd = train_inputs[0].shape[1]
-    config = InMemoryBatchQueueConfig(batch_size=2, num_example=xd, max_len=yd)
-    q = InMemoryBatchQueue(config)
+  # def testInMemoryProducer(self):
+  #   trainpath, testpath = self.write_data()
+  #   train, _, _, _ = prepare(trainpath, testpath)
+  #   train_inputs = instances_to_tensors(train)
+  #   xd = train_inputs[0].shape[0]
+  #   yd = train_inputs[0].shape[1]
+  #   config = InMemoryBatchQueueConfig(batch_size=2, num_example=xd, max_len=yd)
+  #   q = InMemoryBatchQueue(config)
+  #   init_op = tf.group(tf.global_variables_initializer(),
+  #                      tf.local_variables_initializer())
+  #   coord = tf.train.Coordinator()
+  #   with tf.Session() as sess:
+  #     sess.run(init_op)
+  #     q.init(train_inputs, sess)
+  #     tf.train.start_queue_runners(sess=sess)
+  #     batch = sess.run(q.batch)
+  #     print(batch)
+  #     batch = sess.run(q.batch)
+  #     print(batch)
+  #     tf.train.stop_queue_runners(sess=sess)
+  #     # When done, ask the threads to stop.
+  #     coord.request_stop()
+  #     # And wait for them to actually do it.
+  #     coord.join(enqueue_threads)
+
+  def testBucketedProducer(self):
+    tmpdatadir = tf.test.get_temp_dir()
+    train_ids_path, dev_ids_path, vocab_path = prepare_ptb_data(
+      tmpdatadir,
+      space_tokenizer
+    )
+    q = BucketedBatchQueue(train_ids_path, 4, True, 'train_queue')
     init_op = tf.group(tf.global_variables_initializer(),
                        tf.local_variables_initializer())
+    coord = tf.train.Coordinator()
     with tf.Session() as sess:
       sess.run(init_op)
-      q.init(train_inputs, sess)
-      tf.train.start_queue_runners(sess=sess)
-      batch = sess.run(q.batch)
-      print(batch)
-      batch = sess.run(q.batch)
-      print(batch)
-      batch = sess.run(q.batch)
-      print(batch)
+      #tf.train.start_queue_runners(sess=sess)
+      with tf.contrib.slim.queues.QueueRunners(sess):
+        batch = sess.run(q.batch)
+        print(batch)
+        batch = sess.run(q.batch)
+        print(batch)
+#      tf.train.stop_queue_runners(sess=sess)
+      # When done, ask the threads to stop.
+#      coord.request_stop()
+      # And wait for them to actually do it.
+#      coord.join(enqueue_threads)
 
 if __name__ == "__main__":
   tf.test.main()
