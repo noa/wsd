@@ -80,6 +80,6 @@ def main(unused_argv):
     result = read_records('dataset.tfrecords')
 
     assert result == dataset
-  
+
 if __name__ == '__main__':
   tf.app.run()
