@@ -66,7 +66,8 @@ class DataTest(tf.test.TestCase):
   def testBucketedProducer(self):
     tmpdatadir = tf.test.get_temp_dir()
 
-    # Step 1: Download data and convert to words to word IDs.
+    # Step 1: Download data, create vocab, and convert words to word
+    # IDs.
     train_ids_path, dev_ids_path, vocab_path = prepare_ptb_data(
       tmpdatadir,
       space_tokenizer
