@@ -54,12 +54,10 @@ def loss(logits,
       return tf.reduce_mean(crossent)
     return crossent
 
-RNNClassifierConfig = namedtuple('RNNClassifierConfig',
-                                 " ".join(['num_label', 'vocab_size',
-                                           'embed_size', 'hidden_size',
-                                           'cell_type', 'num_layer',
-                                           'keep_prob', 'learning_rate',
-                                           'grad_clip', 'optimizer']))
+HParams = namedtuple('HParams',
+                     'num_label, vocab_size, embed_size, hidden_size, '
+                     'cell_type, num_layer, keep_prob, learning_rate,'
+                     'grad_clip, optimizer')
 
 class RNNClassifier(object):
   def __init__(self, config, input_data, is_training=True):
@@ -145,8 +143,13 @@ class RNNClassifier(object):
       return
     assert self._decoder_logits != None, "call init_decoder first"
 
-    self._lr = tf.Variable(config.learning_rate, trainable=False,
-                           name="learning_rate")
+    self._lr = tf.get_variable(
+      "learning_rate",
+      shape=[],
+      dtype=tf.float32,
+      initializer=tf.constant_initializer(config.learning_rate),
+      trainable=False
+    )
     tvars = tf.trainable_variables()
     grads, _ = tf.clip_by_global_norm(tf.gradients(self._loss, tvars),
                                       config.grad_clip)
