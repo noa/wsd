@@ -264,8 +264,7 @@ def run_topk():
 
     # Run inference & print top K to stdout
     with tf.contrib.slim.queues.QueueRunners(sess):
-      topk_v = sess.run([m.topk_ids])
-      print(type(topk_v))
+      topk_v = sess.run(m.topk_ids)
       for tk in ids_to_words(topk_v, rev_vocab):
         print(tk)
 
