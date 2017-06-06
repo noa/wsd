@@ -29,6 +29,51 @@ from data_reader import batch_examples
 from wsd_utils import prepare_ptb_data
 from wsd_utils import example_generator
 from wsd_utils import space_tokenizer
+from wsd_utils import initialize_vocabulary
+from wsd_utils import sentence_to_token_ids
+from wsd_utils import instances_from_ids
+from wsd_utils import ids_to_words
+
+class InferenceBatchQueue(object):
+  def __init__(self, raw_path, vocab, batch_size, lowercase=False, name=None):
+    seqs = []
+    lens = []
+    targets = []
+    with tf.gfile.GFile(raw_path) as data_file:
+      for line in data_file:
+        token_ids = sentence_to_token_ids(line, vocab, space_tokenizer,
+                                          lowercase=lowercase)
+        max_len = 0
+        for context, target in instances_from_ids(token_ids):
+          seqs.append(context)
+          l = len(context)
+          if l > max_len:
+            max_len = l
+          lens.append(l)
+          targets.append(target)
+    nexample = len(seqs)
+    tf.logging.info('nexample: {}, max len: {}'.format(nexample, max_len))
+    seq_array = np.zeros([nexample, max_len], dtype=np.int64)
+    len_array = np.zeros([nexample], dtype=np.int64)
+    target_array = np.zeros([nexample], dtype=np.int64)
+    for i in range(nexample):
+      seq = seqs[i]
+      for j in range(len(seq)):
+        seq_array[i][j] = seq[j]
+      len_array[i] = lens[i]
+      target_array[i] = targets[i]
+    inputs = (seq_array, len_array, target_array)
+    inputs = tf.train.slice_input_producer(inputs,
+                                           num_epochs=1,
+                                           shuffle=False,
+                                           capacity=batch_size * 2)
+    self._batch = tf.train.batch(inputs, batch_size,
+                                 allow_smaller_final_batch=True)
+
+  @property
+  def batch(self):
+    return self._batch
+
 
 class BucketedBatchQueue(object):
   def __init__(self, raw_path, batch_size, is_training=True, name=None,

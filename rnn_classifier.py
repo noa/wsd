@@ -184,6 +184,10 @@ class RNNClassifier(object):
     session.run(self._lr_update, feed_dict={self._new_lr: lr_value})
 
   @property
+  def inputs(self):
+    return self._inputs
+
+  @property
   def train_op(self):
     return self._train_op
 

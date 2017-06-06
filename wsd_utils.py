@@ -21,6 +21,7 @@ import os
 import re
 import tarfile
 from six.moves import urllib
+import numpy as np
 import tensorflow as tf
 
 # Special vocabulary symbols - we always put them at the start.
@@ -162,8 +163,8 @@ def space_tokenizer(sentence):
   return sentence.strip().split()
 
 def create_vocabulary(vocab_path, data_path, tokenizer,
-                      max_vocabulary_size=None, normalize_digits=False,
-                      force=False):
+                      max_vocabulary_size=None, normalize_digits=True,
+                      lowercase=False, force=False):
   """Create vocabulary file from data file.
 
   Data file is assumed to contain one sentence per line. Each sentence is
@@ -176,8 +177,7 @@ def create_vocabulary(vocab_path, data_path, tokenizer,
     vocabulary_path: path where the vocabulary will be created.
     data_path: data file that will be used to create vocabulary.
     max_vocabulary_size: limit on the size of the created vocabulary.
-    tokenizer: a function to use to tokenize each data sentence;
-      if None, basic_tokenizer will be used.
+    tokenizer: a function to use to tokenize each data sentence
     normalize_digits: Boolean; if true, all digits are replaced by 0s.
   """
   if not tf.gfile.Exists(vocab_path) or force:
@@ -194,6 +194,8 @@ def create_vocabulary(vocab_path, data_path, tokenizer,
 
         tokens = tokenizer(line)
         for w in tokens:
+          if lowercase:
+            w = w.lower()
           word = re.sub(_DIGIT_RE, "0", w) if normalize_digits else w
           if word in vocab:
             vocab[word] += 1
@@ -243,8 +245,26 @@ def initialize_vocabulary(vocabulary_path):
   else:
     raise ValueError("Vocabulary file %s not found.", vocabulary_path)
 
+def ids_to_words(ids, rev_vocab):
+  if type(ids) == list:
+    return [rev_vocab[i] for i in ids]
+  elif type(ids) == np.ndarray:
+    if len(ids.shape) == 1:
+      ret = []
+      for i in range(ids.shape[0]):
+        ret.append(rev_vocab[ids[i]])
+      return ret
+    elif len(ids.shape) == 2:
+      ret = []
+      for row in range(ids.shape[0]):
+        ret.append(ids_to_words(ids[row], rev_vocab))
+      return ret
+    else:
+      raise ValueError('unsupported numpy shape: {}'.format(ids.shape))
+  return rev_vocab[ids]
+
 def sentence_to_token_ids(sentence, vocabulary, tokenizer,
-                          normalize_digits=old_style):
+                          normalize_digits=old_style, lowercase=False):
   """Convert a string to list of integers representing token-ids.
 
   For example, a sentence "I have a dog" may become tokenized into
@@ -264,6 +284,8 @@ def sentence_to_token_ids(sentence, vocabulary, tokenizer,
   words = tokenizer(sentence)
   result = []
   for w in words:
+    if lowercase:
+      w = w.lower()
     if normalize_digits:
       w = re.sub(_DIGIT_RE, "0", w)
     if w in vocabulary:
@@ -273,7 +295,7 @@ def sentence_to_token_ids(sentence, vocabulary, tokenizer,
   return result
 
 def data_to_token_ids(data_path, target_path, vocabulary_path, tokenizer,
-                      normalize_digits=False, force=False):
+                      normalize_digits=False, lowercase=False, force=False):
   """Tokenize data file and turn into token-ids using given vocabulary file.
 
   This function loads data line-by-line from data_path, calls the above
@@ -300,12 +322,14 @@ def data_to_token_ids(data_path, target_path, vocabulary_path, tokenizer,
           if counter % 10000 == 0:
             tf.logging.info("tokenizing line %d" % counter)
           token_ids = sentence_to_token_ids(line, vocab, tokenizer,
-                                            normalize_digits)
+                                            normalize_digits=normalize_digits,
+                                            lowercase=lowercase)
           tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
 
 def prepare_ptb_data(data_dir, tokenizer,
                      vocabulary_size=100000,
                      normalize_digits=False,
+                     lowercase=False,
                      force=False):
   """ Create vocabularies and tokenize data.
 
@@ -336,21 +360,21 @@ def prepare_ptb_data(data_dir, tokenizer,
   create_vocabulary(vocab_path, train_path, tokenizer,
                     max_vocabulary_size=vocabulary_size,
                     normalize_digits=normalize_digits,
-                    force=force)
+                    lowercase=lowercase, force=force)
   tf.logging.info('Vocabulary path: {}'.format(vocab_path))
 
   # Create token ids for the training data.
   train_ids_path = train_path + (".%d.ids" % vocabulary_size)
   data_to_token_ids(train_path, train_ids_path, vocab_path,
                     tokenizer, normalize_digits=normalize_digits,
-                    force=force)
+                    lowercase=lowercase, force=force)
   tf.logging.info('PTB train ids path: {}'.format(train_ids_path))
 
   # Create token ids for the development data.
   dev_ids_path = dev_path + (".%d.ids" % vocabulary_size)
   data_to_token_ids(dev_path, dev_ids_path, vocab_path,
                     tokenizer, normalize_digits=normalize_digits,
-                    force=force)
+                    lowercase=lowercase, force=force)
   tf.logging.info('PTB dev ids path: {}'.format(dev_ids_path))
 
   return (train_ids_path, dev_ids_path, vocab_path)

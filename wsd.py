@@ -29,12 +29,11 @@ from time import time
 
 from wsd_utils import prepare_ptb_data
 from wsd_utils import initialize_vocabulary
-from wsd_utils import sentence_to_token_ids
-from wsd_utils import instances_from_ids
-from wsd_utils import example_generator
+from wsd_utils import ids_to_words
 from wsd_utils import space_tokenizer
 
 from data import BucketedBatchQueue
+from data import InferenceBatchQueue
 
 from rnn_classifier import HParams
 from rnn_classifier import RNNClassifier
@@ -75,9 +74,19 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
   'max_valid', None, 'Maximum number of validation instances')
 flags.DEFINE_integer(
-  'hidden_size', 256, 'RNN state size')
+  'hidden_size', 512, 'RNN state size')
 flags.DEFINE_integer(
-  'embed_size', 128, 'Input symbol embedding size')
+  'embed_size', 256, 'Input symbol embedding size')
+flags.DEFINE_bool(
+  'lowercase', True, 'Lower case all words.')
+flags.DEFINE_float(
+  'dropout', 0.5, 'Dropout probability.')
+flags.DEFINE_integer(
+  'num_layer', 3, 'Number of stacked RNN layers.')
+flags.DEFINE_float(
+  'learning_rate', 0.0001, 'Learning rate.')
+flags.DEFINE_float(
+  'grad_clip', 10.0, 'Gradient norm clip.')
 
 def train(raw_train_path, raw_dev_path, model_config, batch_size,
           num_training_iterations, save_path='checkpoints', save_secs=60,
@@ -126,31 +135,37 @@ def train(raw_train_path, raw_dev_path, model_config, batch_size,
       else:
         train_loss_v, _ = sess.run((m.loss, m.train_op))
 
-def get_model_config(vocab_path):
-  vocab_size = 0
-  with open(vocab_path) as f:
-    for line in f:
-      vocab_size += 1
+def get_model_config(vocab_size):
   config = HParams(num_label=vocab_size, vocab_size=vocab_size,
                    embed_size=FLAGS.embed_size, hidden_size=FLAGS.hidden_size,
-                   cell_type='gru', num_layer=2, keep_prob=1.0, K=FLAGS.K,
-                   learning_rate=0.0001, grad_clip=10.0, optimizer='adam')
+                   cell_type='gru', num_layer=FLAGS.num_layer,
+                   keep_prob=FLAGS.dropout, K=FLAGS.K,
+                   learning_rate=FLAGS.learning_rate, grad_clip=FLAGS.grad_clip,
+                   optimizer='adam')
   return config
 
 def run_training():
   random.seed(FLAGS.seed)
-  tf.logging.set_verbosity(tf.logging.INFO)
   tf.set_random_seed(FLAGS.seed)
   tf.logging.info('Using {} corpus'.format(FLAGS.corpus))
   if FLAGS.corpus == 'ptb':
     raw_train_path, raw_dev_path, vocab_path = prepare_ptb_data(
       FLAGS.data_dir,
       space_tokenizer,
+      lowercase=FLAGS.lowercase,
       force=FLAGS.force_preprocess
     )
   else:
     raise ValueError('unrecognized corpus: {}'.format(FLAGS.corpus))
-  config = get_model_config(vocab_path)
+
+  # Read vocabulary
+  vocab, rev_vocab = initialize_vocabulary(FLAGS.vocab_path)
+  vocab_size = len(vocab)
+
+  # Get model configuration
+  config = get_model_config(vocab_size)
+
+  # Train model (maybe resume existing checkpoint)
   train(raw_train_path, raw_dev_path, config, FLAGS.batch_size,
         FLAGS.num_training_iterations, save_path=FLAGS.save_path,
         save_secs=FLAGS.save_secs, report_interval=FLAGS.report_interval)
@@ -163,57 +178,50 @@ def run_topk():
   if not FLAGS.checkpoint_path:
     raise ValueError('must supply path to model checkpoint: --checkpoint_path')
 
+  # Read vocabulary
+  vocab, rev_vocab = initialize_vocabulary(FLAGS.vocab_path)
+
+  # Prepare input queue
+  q = InferenceBatchQueue(FLAGS.input_path, vocab, FLAGS.batch_size,
+                          lowercase=FLAGS.lowercase)
+
   # Get model configuration
-  config = get_model_config(FLAGS.vocab_path)
+  config = get_model_config(len(vocab))
 
-  # Prepare inputs
-  vocab, _ = initialize_vocabulary(FLAGS.vocab_path)
-  tf.logging.info("{} entries in the vocabulary".format(len(vocab)))
-  seqs = []
-  lens = []
-  targets = []
-  with tf.gfile.GFile(FLAGS.input_path) as data_file:
-    for line in data_file:
-      token_ids = sentence_to_token_ids(line, vocab, space_tokenizer)
-      max_len = 0
-      for context, target in instances_from_ids(token_ids):
-        seqs.append(context)
-        l = len(context)
-        if l > max_len:
-          max_len = l
-        lens.append(l)
-        targets.append(target)
-  nexample = len(seqs)
-  seq_array = np.zeros([nexample, max_len], dtype=np.int64)
-  len_array = np.zeros([nexample], dtype=np.int64)
-  target_array = np.zeros([nexample], dtype=np.int64)
-  for i in range(nexample):
-    seq = seqs[i]
-    for j in range(len(seq)):
-      seq_array[i][j]
-    len_array[i] = lens[i]
-    target_array[i] = targets[i]
-  inputs = (seq_array, len_array, target_array)
-  inputs = tf.train.slice_input_producer(inputs,
-                                         num_epochs=1,
-                                         shuffle=False,
-                                         capacity=FLAGS.batch_size * 2)
-  batch = tf.train.batch(inputs, FLAGS.batch_size,
-                         allow_smaller_final_batch=True)
+  # Create inference graph
+  with tf.variable_scope("Model"):
+    m = RNNClassifier(config, q.batch, is_training=False)
 
-  # Prepare model
-  m = RNNClassifier(config, batch, is_training=False)
-
-  # Run inference
   saver = tf.train.Saver()
+  init_op = tf.group(tf.global_variables_initializer(),
+                     tf.local_variables_initializer())
   with tf.Session() as sess:
+    # Initialize queues
+    sess.run(init_op)
+
+    # Restore model parameters
     tf.logging.info('Restoring model: {}'.format(FLAGS.checkpoint_path))
     saver.restore(sess, FLAGS.checkpoint_path)
+
+    # Run inference
     with tf.contrib.slim.queues.QueueRunners(sess):
-      topk_v = sess.run(m.topk)
-      print(topk_v)
+      inputs_v, logits_v, guesses_v, topk_v = sess.run([m.inputs, m.logits,
+                                                        m.guesses, m.topk_ids])
+      print('inputs')
+      for ex in ids_to_words(inputs_v, rev_vocab):
+        print(ex)
+      print('logits')
+      print(type(logits_v))
+      print('guesses')
+      print(type(guesses_v))
+      print(ids_to_words(guesses_v, rev_vocab))
+      print('topk')
+      print(type(topk_v))
+      for tk in ids_to_words(topk_v, rev_vocab):
+        print(tk)
 
 def main(_):
+  tf.logging.set_verbosity(tf.logging.INFO)
   if FLAGS.mode == 'train':
     run_training()
   elif FLAGS.mode == 'topk':
