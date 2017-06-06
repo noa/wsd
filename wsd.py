@@ -22,15 +22,15 @@ import os
 import pickle
 import random
 import itertools
-from timeit import default_timer as timer
 import numpy as np
 import tensorflow as tf
 from math import exp
-from tqdm import tqdm
+from time import time
+from data import BucketedBatchQueue
 
-from data import instances_to_tensors
-from data import prepare
-from data import BatchQueue
+from wsd_utils import prepare_ptb_data
+from wsd_utils import example_generator
+from wsd_utils import space_tokenizer
 
 from rnn_classifier import RNNClassifierConfig
 from rnn_classifier import RNNClassifier
@@ -39,15 +39,19 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-  'train_path', None, 'Path to training instances')
+  'corpus', 'ptb', 'Which dataset to train on')
 flags.DEFINE_string(
-  'valid_path', None, 'Path to validation instances')
+  'data_dir', 'data', 'Data directory.')
+flags.DEFINE_bool(
+  'force_preprocess', False, 'Force preprocessing (overwrite existing)')
 flags.DEFINE_string(
   'save_path', None, 'Directory for checkpoint files')
 flags.DEFINE_integer(
   'seed', 42, 'Seed for random number generator')
 flags.DEFINE_integer(
   'max_epoch', 100, 'Seed for random number generator')
+flags.DEFINE_integer(
+  'batch_per_epoch', 1000, 'Number of batches per epoch')
 flags.DEFINE_integer(
   'batch_size', 32, 'Batch size for gradient computation')
 flags.DEFINE_integer(
@@ -59,37 +63,38 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
   'embed_size', 128, 'Input symbol embedding size')
 
-def get_input_queue(batch_size, examples, is_training, name=None):
-  return BatchQueue(examples, batch_size, is_training, name=name)
-
 def run_epoch(sess, model, eval_op=None, verbose=False):
-  tic = timer()
+  tic = time()
   losses = 0.0
   iters = 0
   num_words = 0
-  batch_size = model.batch_size
-  epoch_size = model.batch_per_epoch
-  fetches = {"loss": model.loss}
+  batch_size = FLAGS.batch_size
+  epoch_size = FLAGS.batch_per_epoch
+  fetches = {"loss": model.loss, "lens": model.lens}
   if eval_op is not None:
     fetches["eval_op"] = eval_op
   for step in range(epoch_size):
     vals = sess.run(fetches)
     loss = vals["loss"]
+    lens = vals["lens"]
+    total_len = sum(lens)
     losses += loss
     iters += batch_size
-    num_words += model.total_len
+    num_words += total_len
     if verbose and step % (epoch_size // 10) == 10:
       infostr = "{:.3f} perplexity: {:.6f} speed {:.0f} wps".format(
         step * 1.0 / epoch_size,
         np.exp(losses / iters),
-        iters * batch_size / (timer() - tic))
+        iters * batch_size / (time() - tic))
       tf.logging.info(infostr)
   return np.exp(losses / iters)
 
-def train(train_examples, valid_examples, model_config, max_epoch,
+def train(raw_train_path, raw_dev_path, model_config, max_epoch,
           batch_size, save_path = None):
   with tf.name_scope("Train"):
-    train_queue = get_input_queue(batch_size, train_examples, name="TrainInput")
+    train_queue = BucketedBatchQueue(raw_train_path, batch_size,
+                                     is_training=True, name="train_queue",
+                                     force_preprocess=FLAGS.force_preprocess)
     with tf.variable_scope("Model", reuse=None):
       m = RNNClassifier(model_config, train_queue, is_training=True)
 
@@ -97,7 +102,9 @@ def train(train_examples, valid_examples, model_config, max_epoch,
   tf.summary.scalar("Learning Rate", m.lr)
 
   with tf.name_scope("Valid"):
-    valid_queue = get_input_queue(batch_size, valid_examples, name="ValidInput")
+    valid_queue = BucketedBatchQueue(raw_dev_path, batch_size,
+                                     is_training=False, name="valid_queue",
+                                     force_preprocess=FLAGS.force_preprocess)
     with tf.variable_scope("Model", reuse=True):
       mvalid = RNNClassifier(model_config, valid_queue, is_training=False)
 
@@ -116,32 +123,30 @@ def train(train_examples, valid_examples, model_config, max_epoch,
   with tf.Session() as sess:
     tf.logging.info("Initializing global and local variables.")
     sess.run(init_op)
+    with tf.contrib.slim.queues.QueueRunners(sess):
+      for i in range(max_epoch):
+        m.assign_lr(sess, model_config.learning_rate)
+        tf.logging.info("Epoch: {} Learning rate: {:.6f}".format(
+          i + 1, sess.run(m.lr)))
+        train_perplexity = run_epoch(sess, m, eval_op=m.train_op,
+                                     verbose=True)
+        tf.logging.info("Epoch: {} Train perplexity: {:.6f}".format(
+          i + 1, train_perplexity))
 
-    tf.logging.info("Moving training data to device.")
-    train_queue.init(train_data, sess)
-    tf.logging.info("Moving validation data to device.")
-    valid_queue.init(valid_data, sess)
+        valid_perplexity = run_epoch(sess, mvalid)
+        tf.logging.info("Epoch: {} Valid perplexity: {:.6f}".format(
+          i + 1, valid_perplexity))
 
-    tf.train.start_queue_runners(sess=sess)
-    for i in range(max_epoch):
-      m.assign_lr(sess, model_config.learning_rate)
-      tf.logging.info("Epoch: {} Learning rate: {:.6f}".format(
-        i + 1, sess.run(m.lr)))
-      train_perplexity = run_epoch(sess, m, eval_op=m.train_op,
-                                   verbose=True)
-      tf.logging.info("Epoch: {} Train perplexity: {:.6f}".format(
-        i + 1, train_perplexity))
+        if save_path:
+          tf.logging.info("Saving model to: {}".format(save_path))
+          sv.saver(sess, save_path, global_step=global_step)
 
-      valid_perplexity = run_epoch(sess, mvalid)
-      tf.logging.info("Epoch: {} Valid perplexity: {:.6f}".format(
-        i + 1, valid_perplexity))
-
-    if save_path:
-      tf.logging.info("Saving model to: {}".format(save_path))
-      sv.saver(sess, save_path, global_step=global_step)
-
-def get_model_config(num_tags, num_syms):
-  config = RNNClassifierConfig(num_label=num_tags, vocab_size=num_syms,
+def get_model_config(vocab_path):
+  vocab_size = 0
+  with open(vocab_path) as f:
+    for line in f:
+      vocab_size += 1
+  config = RNNClassifierConfig(num_label=vocab_size, vocab_size=vocab_size,
                                embed_size=FLAGS.embed_size,
                                hidden_size=FLAGS.hidden_size,
                                cell_type='gru', num_layer=2, keep_prob=1.0,
@@ -153,16 +158,18 @@ def main(_):
   random.seed(FLAGS.seed)
   tf.logging.set_verbosity(tf.logging.INFO)
   tf.set_random_seed(FLAGS.seed)
-  tf.logging.info('Loading training data: {}'.format(FLAGS.train_path))
-  tf.logging.info('Loading validation data: {}'.format(FLAGS.valid_path))
-  corpus = prepare(FLAGS.train_path,
-                   FLAGS.valid_path,
-                   max_train_examples=FLAGS.max_train,
-                   max_valid_examples=FLAGS.max_valid)
-  train_examples, valid_examples, syms, tags = corpus
-  config = get_model_config(len(tags), len(syms))
-  train(train_examples, valid_examples, config,
-        FLAGS.max_epoch, FLAGS.batch_size, save_path=FLAGS.save_path)
+  tf.logging.info('Using {} corpus'.format(FLAGS.corpus))
+  if FLAGS.corpus == 'ptb':
+    raw_train_path, raw_dev_path, vocab_path = prepare_ptb_data(
+      FLAGS.data_dir,
+      space_tokenizer,
+      force=FLAGS.force_preprocess
+    )
+  else:
+    raise ValueError('unrecognized corpus: {}'.format(FLAGS.corpus))
+  config = get_model_config(vocab_path)
+  train(raw_train_path, raw_dev_path, config, FLAGS.max_epoch, FLAGS.batch_size,
+        save_path=FLAGS.save_path)
 
 if __name__ == "__main__":
   tf.app.run()

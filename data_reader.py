@@ -140,7 +140,7 @@ def batch_examples(examples, batch_size, bucket_boundaries=None):
     max_length = 0
     for v in examples.values():  # We assume 0-th dimension is the length.
       max_length = tf.maximum(max_length, tf.shape(v)[0])
-    (_, outputs) = tf.contrib.training.bucket_by_sequence_length(
+    (lens, outputs) = tf.contrib.training.bucket_by_sequence_length(
         max_length, examples, batch_size, bucket_boundaries,
         capacity=2 * batch_size, dynamic_pad=True)
-    return outputs
+    return (lens, outputs)

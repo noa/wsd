@@ -31,11 +31,14 @@ from wsd_utils import example_generator
 from wsd_utils import space_tokenizer
 
 class BucketedBatchQueue(object):
-  def __init__(self, raw_path, batch_size, is_training, name=None):
+  def __init__(self, raw_path, batch_size, is_training=True, name=None,
+               force_preprocess=False):
     record_path = raw_path + '.tfrecords'
-    tf.logging.info('Writing TF records to: {}'.format(record_path))
-    g = example_generator(raw_path)
-    write_records(g, record_path)
+    tf.logging.info('Raw input data path: {}'.format(raw_path))
+    tf.logging.info('Writing TF example records to: {}'.format(record_path))
+    if not os.path.exists(record_path):
+      g = example_generator(raw_path)
+      write_records(g, record_path)
     queue = examples_queue(
       data_sources=record_path,
       data_fields_to_features={
@@ -44,7 +47,8 @@ class BucketedBatchQueue(object):
       },
       training=is_training
     )
-    self._batch = batch_examples(queue, batch_size)
+    lens, batch = batch_examples(queue, batch_size)
+    self._batch = (batch['sequence'], lens, batch['label'])
 
   @property
   def batch(self):

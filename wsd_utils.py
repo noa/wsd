@@ -81,8 +81,6 @@ def maybe_download(directory, filename, url):
     filepath, _ = urllib.request.urlretrieve(url, filepath)
     statinfo = os.stat(filepath)
     tf.logging.info("Successfully downloaded: {}".format(filename))
-    #tf.logging.info("Successfully downloaded", filename, statinfo.st_size,
-    #                "bytes")
   return filepath
 
 def get_ptb_train_set(directory):
