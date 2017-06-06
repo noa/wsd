@@ -39,7 +39,7 @@ class BucketedBatchQueue(object):
 
     # Step 1: Create training instances from raw IDs file and
     # serialize in binary TF record format for fast access.
-    if not os.path.exists(record_path):
+    if not os.path.exists(record_path) or force_preprocess:
       g = example_generator(raw_path)
       write_records(g, record_path)
 
