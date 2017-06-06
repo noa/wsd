@@ -39,19 +39,25 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-  'mode', 'train', 'One of [train|eval|topk]')
+  'mode', 'train', 'One of [train|topk]')
 flags.DEFINE_string(
   'corpus', 'ptb', 'Which dataset to train on')
 flags.DEFINE_string(
-  'data_dir', 'data', 'Data directory.')
+  'data_dir', 'data', 'Data directory to store preprocessed training data.')
+flags.DEFINE_string(
+  'vocab_path', None, '[topk] Path to vocabulary file.')
+flags.DEFINE_string(
+  'input_path', None, '[topk] Path to input sentences for predictions.')
 flags.DEFINE_bool(
   'force_preprocess', False, 'Force preprocessing (overwrite existing)')
+flags.DEFINE_string(
+  'checkpoint_path', None, '[topk] Path to model checkpoint to restore.')
 flags.DEFINE_string(
   'save_path', 'checkpoints', 'Directory for checkpoint files')
 flags.DEFINE_integer(
   'save_secs', 60, 'Number of seconds between each model save.')
 flags.DEFINE_integer(
-  'eval_interval', 100, 'Number of training iterations')
+  'report_interval', 1000, 'Number of iterations between status updates.')
 flags.DEFINE_integer(
   'seed', 42, 'Seed for random number generator')
 flags.DEFINE_integer(
@@ -67,44 +73,15 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
   'embed_size', 128, 'Input symbol embedding size')
 
-def run_epoch(sess, model, eval_op=None, verbose=False):
-  tic = time()
-  losses = 0.0
-  iters = 0
-  num_words = 0
-  batch_size = FLAGS.batch_size
-  epoch_size = FLAGS.batch_per_epoch
-  fetches = {"loss": model.loss, "lens": model.lens}
-  if eval_op is not None:
-    fetches["eval_op"] = eval_op
-  for step in range(epoch_size):
-    vals = sess.run(fetches)
-    loss = vals["loss"]
-    lens = vals["lens"]
-    total_len = sum(lens)
-    losses += loss
-    iters += batch_size
-    num_words += total_len
-    if verbose and step % (epoch_size // 10) == 10:
-      infostr = "{:.3f} perplexity: {:.6f} speed {:.0f} wps".format(
-        step * 1.0 / epoch_size,
-        np.exp(losses / iters),
-        iters * batch_size / (time() - tic))
-      tf.logging.info(infostr)
-  return np.exp(losses / iters)
-
 def train(raw_train_path, raw_dev_path, model_config, batch_size,
-          num_training_iterations, save_path='checkpoints', save_secs=60*5,
-          report_interval=100):
+          num_training_iterations, save_path='checkpoints', save_secs=60,
+          report_interval=1000):
   with tf.name_scope("Train"):
     train_queue = BucketedBatchQueue(raw_train_path, batch_size,
                                      is_training=True, name="train_queue",
                                      force_preprocess=FLAGS.force_preprocess)
     with tf.variable_scope("Model", reuse=None):
       m = RNNClassifier(model_config, train_queue, is_training=True)
-
-  tf.summary.scalar("Training Loss", m.loss)
-  tf.summary.scalar("Learning Rate", m.lr)
 
   with tf.name_scope("Valid"):
     valid_queue = BucketedBatchQueue(raw_dev_path, batch_size,
@@ -113,18 +90,8 @@ def train(raw_train_path, raw_dev_path, model_config, batch_size,
     with tf.variable_scope("Model", reuse=True):
       mvalid = RNNClassifier(model_config, valid_queue, is_training=False)
 
-  init_op = tf.group(tf.global_variables_initializer(),
-                     tf.local_variables_initializer())
-
-  global_step = tf.get_variable(
-    name="global_step",
-    shape=[],
-    dtype=tf.int64,
-    initializer=tf.zeros_initializer(),
-    trainable=False,
-    collections=[tf.GraphKeys.GLOBAL_VARIABLES, tf.GraphKeys.GLOBAL_STEP])
-
-  saver = tf.train.Saver()
+  saver = tf.train.Saver(max_to_keep=10,
+                         keep_checkpoint_every_n_hours=1)
 
   hooks = [
     tf.train.CheckpointSaverHook(
@@ -134,17 +101,22 @@ def train(raw_train_path, raw_dev_path, model_config, batch_size,
     )
   ]
 
+  tf.logging.info('Report interval: %d', report_interval)
   with tf.train.SingularMonitoredSession(
       hooks=hooks, checkpoint_dir=save_path) as sess:
-    start_iteration = sess.run(global_step)
+    start_iteration = sess.run(m.global_step)
+    tf.logging.info('Start iteration: %d of %d', start_iteration,
+                    num_training_iterations)
     for train_iteration in range(start_iteration, num_training_iterations):
       if (train_iteration + 1) % report_interval == 0:
         train_loss_v, valid_loss_v, _ = sess.run(
           (m.loss, mvalid.loss, m.train_op))
-        tf.logging.info('%d: Training loss %f. Validation loss %f.',
+        tf.logging.info('%d of %d: Training loss %f. Validation loss %f. Global step %d',
                         train_iteration,
+                        num_training_iterations,
                         train_loss_v,
-                        valid_loss_v)
+                        valid_loss_v,
+                        sess.run(m.global_step))
       else:
         train_loss_v, _ = sess.run((m.loss, m.train_op))
 
@@ -159,7 +131,7 @@ def get_model_config(vocab_path):
                    learning_rate=0.0001, grad_clip=10.0, optimizer='adam')
   return config
 
-def main(_):
+def run_training():
   random.seed(FLAGS.seed)
   tf.logging.set_verbosity(tf.logging.INFO)
   tf.set_random_seed(FLAGS.seed)
@@ -174,8 +146,28 @@ def main(_):
     raise ValueError('unrecognized corpus: {}'.format(FLAGS.corpus))
   config = get_model_config(vocab_path)
   train(raw_train_path, raw_dev_path, config, FLAGS.batch_size,
-        FLAGS.num_training_iterations,
-        save_path=FLAGS.save_path)
+        FLAGS.num_training_iterations, save_path=FLAGS.save_path,
+        save_secs=FLAGS.save_secs, report_interval=FLAGS.report_interval)
+
+def run_topk():
+  if not FLAGS.vocab_path:
+    raise ValueError('must supply path to vocabulary file')
+  if not FLAGS.input_path:
+    raise ValueError('must supply input path')
+  if not FLAGS.checkpoint_path:
+    raise ValueError('must supply path to model checkpoint')
+  saver = tf.train.Saver()
+  with tf.Session() as sess:
+    tf.logging.info('Loading model: checkpoint')
+    saver.restore(sess, FLAGS.checkpoint_path)
+
+def main(_):
+  if FLAGS.mode == 'train':
+    run_training()
+  elif FLAGS.mode == 'topk':
+    run_topk()
+  else:
+    raise ValueError('unrecognized mode: {}'.format(FLAGS.mode))
 
 if __name__ == "__main__":
   tf.app.run()

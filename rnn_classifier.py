@@ -130,7 +130,6 @@ class RNNClassifier(object):
                                         name='decoder_prediction_train')
 
       # Flatten while preserving the leading batch dim
-      # targets = tf.contrib.layers.flatten(self._targets)
       targets = tf.reshape(self._targets, [-1])
 
       # Compute loss
@@ -142,6 +141,14 @@ class RNNClassifier(object):
     if not is_training:
       return
     assert self._decoder_logits != None, "call init_decoder first"
+
+    self._global_step = tf.get_variable(
+      name="global_step",
+      shape=[],
+      dtype=tf.int64,
+      initializer=tf.zeros_initializer(),
+      trainable=False,
+      collections=[tf.GraphKeys.GLOBAL_VARIABLES, tf.GraphKeys.GLOBAL_STEP])
 
     self._lr = tf.get_variable(
       "learning_rate",
@@ -162,7 +169,8 @@ class RNNClassifier(object):
     else:
       raise ValueError('unsupported optimizer: {}'.format(config.optimizer))
 
-    self._train_op = optimizer.apply_gradients(zip(grads, tvars))
+    self._train_op = optimizer.apply_gradients(zip(grads, tvars),
+                                               global_step=self._global_step)
 
     self._new_lr = tf.placeholder(
       tf.float32, shape=[], name="new_learning_rate")
@@ -178,6 +186,10 @@ class RNNClassifier(object):
   @property
   def lr(self):
     return self._lr
+
+  @property
+  def global_step(self):
+    return self._global_step
 
   @property
   def loss(self):
