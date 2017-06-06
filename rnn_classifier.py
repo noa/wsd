@@ -57,12 +57,12 @@ def loss(logits,
 HParams = namedtuple('HParams',
                      'num_label, vocab_size, embed_size, hidden_size, '
                      'cell_type, num_layer, keep_prob, learning_rate,'
-                     'grad_clip, optimizer')
+                     'grad_clip, optimizer, K')
 
 class RNNClassifier(object):
-  def __init__(self, config, input_data, is_training=True):
+  def __init__(self, config, batch, is_training=True):
     self._cell_type = config.cell_type
-    self._inputs, self._lens, self._targets = input_data.batch
+    self._inputs, self._lens, self._targets = batch
 
     if config.num_label < 1 or config.vocab_size < 1:
       raise ValueError("must set num_label and vocab_size")
@@ -137,6 +137,10 @@ class RNNClassifier(object):
                         targets=targets,
                         name="cross_entropy")
 
+      if not is_training:
+        self._topk_log_probs, self._topk_ids = tf.nn.top_k(
+          tf.log(tf.nn.softmax(self._decoder_logits)), k=config.K)
+
   def _init_optimizer(self, is_training, config):
     if not is_training:
       return
@@ -194,6 +198,10 @@ class RNNClassifier(object):
   @property
   def loss(self):
     return self._loss
+
+  @property
+  def topk_ids(self):
+    return self._topk_ids
 
   @property
   def encoder_inputs(self):

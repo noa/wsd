@@ -47,6 +47,15 @@ _DIGIT_RE = re.compile("\d")
 # Data locations
 _PTB_URL = "http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
 
+def instances_from_ids(ids):
+  for i in range(len(ids)):
+    copy_source_ids = list(ids) + [EOS_ID]
+    target_id = copy_source_ids[i]
+    if target_id in set([PAD_ID, HELDOUT_ID, EOS_ID]):
+      continue
+    copy_source_ids[i] = HELDOUT_ID
+    yield (copy_source_ids, target_id)
+
 def example_generator(source_path, max_examples=None):
   ninstances = 0
   nlines = 0
@@ -58,15 +67,10 @@ def example_generator(source_path, max_examples=None):
       if nlines % 10000 == 0:
         tf.logging.info("\treading data line {}".format(nlines))
       source_ids = [int(x) for x in source.split()]
-      for i in range(len(source_ids)):
-        copy_source_ids = list(source_ids) + [EOS_ID]
-        target_id = copy_source_ids[i]
-        if target_id in set([PAD_ID, HELDOUT_ID, EOS_ID, UNK_ID]):
-          continue
-        copy_source_ids[i] = HELDOUT_ID
+      for instance in instances_from_ids(source_ids):
         ninstances += 1
-        yield (copy_source_ids, target_id)
-      if max_examples and nexamples > max_examples:
+        yield instance
+      if max_examples and ninstances > max_examples:
         return
       source = source_file.readline()
 

@@ -26,11 +26,15 @@ import numpy as np
 import tensorflow as tf
 from math import exp
 from time import time
-from data import BucketedBatchQueue
 
 from wsd_utils import prepare_ptb_data
+from wsd_utils import initialize_vocabulary
+from wsd_utils import sentence_to_token_ids
+from wsd_utils import instances_from_ids
 from wsd_utils import example_generator
 from wsd_utils import space_tokenizer
+
+from data import BucketedBatchQueue
 
 from rnn_classifier import HParams
 from rnn_classifier import RNNClassifier
@@ -44,12 +48,14 @@ flags.DEFINE_string(
   'corpus', 'ptb', 'Which dataset to train on')
 flags.DEFINE_string(
   'data_dir', 'data', 'Data directory to store preprocessed training data.')
+flags.DEFINE_bool(
+  'force_preprocess', False, 'Force preprocessing (overwrite existing)')
+flags.DEFINE_integer(
+  'K', 5, '[topk] Number of results to return in top K predictions.')
 flags.DEFINE_string(
   'vocab_path', None, '[topk] Path to vocabulary file.')
 flags.DEFINE_string(
   'input_path', None, '[topk] Path to input sentences for predictions.')
-flags.DEFINE_bool(
-  'force_preprocess', False, 'Force preprocessing (overwrite existing)')
 flags.DEFINE_string(
   'checkpoint_path', None, '[topk] Path to model checkpoint to restore.')
 flags.DEFINE_string(
@@ -81,14 +87,14 @@ def train(raw_train_path, raw_dev_path, model_config, batch_size,
                                      is_training=True, name="train_queue",
                                      force_preprocess=FLAGS.force_preprocess)
     with tf.variable_scope("Model", reuse=None):
-      m = RNNClassifier(model_config, train_queue, is_training=True)
+      m = RNNClassifier(model_config, train_queue.batch, is_training=True)
 
   with tf.name_scope("Valid"):
     valid_queue = BucketedBatchQueue(raw_dev_path, batch_size,
                                      is_training=False, name="valid_queue",
                                      force_preprocess=FLAGS.force_preprocess)
     with tf.variable_scope("Model", reuse=True):
-      mvalid = RNNClassifier(model_config, valid_queue, is_training=False)
+      mvalid = RNNClassifier(model_config, valid_queue.batch, is_training=False)
 
   saver = tf.train.Saver(max_to_keep=10,
                          keep_checkpoint_every_n_hours=1)
@@ -127,7 +133,7 @@ def get_model_config(vocab_path):
       vocab_size += 1
   config = HParams(num_label=vocab_size, vocab_size=vocab_size,
                    embed_size=FLAGS.embed_size, hidden_size=FLAGS.hidden_size,
-                   cell_type='gru', num_layer=2, keep_prob=1.0,
+                   cell_type='gru', num_layer=2, keep_prob=1.0, K=FLAGS.K,
                    learning_rate=0.0001, grad_clip=10.0, optimizer='adam')
   return config
 
@@ -151,15 +157,61 @@ def run_training():
 
 def run_topk():
   if not FLAGS.vocab_path:
-    raise ValueError('must supply path to vocabulary file')
+    raise ValueError('must supply path to vocabulary file: --vocab_path')
   if not FLAGS.input_path:
-    raise ValueError('must supply input path')
+    raise ValueError('must supply input sentences: --input_path')
   if not FLAGS.checkpoint_path:
-    raise ValueError('must supply path to model checkpoint')
+    raise ValueError('must supply path to model checkpoint: --checkpoint_path')
+
+  # Get model configuration
+  config = get_model_config(FLAGS.vocab_path)
+
+  # Prepare inputs
+  vocab, _ = initialize_vocabulary(FLAGS.vocab_path)
+  tf.logging.info("{} entries in the vocabulary".format(len(vocab)))
+  seqs = []
+  lens = []
+  targets = []
+  with tf.gfile.GFile(FLAGS.input_path) as data_file:
+    for line in data_file:
+      token_ids = sentence_to_token_ids(line, vocab, space_tokenizer)
+      max_len = 0
+      for context, target in instances_from_ids(token_ids):
+        seqs.append(context)
+        l = len(context)
+        if l > max_len:
+          max_len = l
+        lens.append(l)
+        targets.append(target)
+  nexample = len(seqs)
+  seq_array = np.zeros([nexample, max_len], dtype=np.int64)
+  len_array = np.zeros([nexample], dtype=np.int64)
+  target_array = np.zeros([nexample], dtype=np.int64)
+  for i in range(nexample):
+    seq = seqs[i]
+    for j in range(len(seq)):
+      seq_array[i][j]
+    len_array[i] = lens[i]
+    target_array[i] = targets[i]
+  inputs = (seq_array, len_array, target_array)
+  inputs = tf.train.slice_input_producer(inputs,
+                                         num_epochs=1,
+                                         shuffle=False,
+                                         capacity=FLAGS.batch_size * 2)
+  batch = tf.train.batch(inputs, FLAGS.batch_size,
+                         allow_smaller_final_batch=True)
+
+  # Prepare model
+  m = RNNClassifier(config, batch, is_training=False)
+
+  # Run inference
   saver = tf.train.Saver()
   with tf.Session() as sess:
-    tf.logging.info('Loading model: checkpoint')
+    tf.logging.info('Restoring model: {}'.format(FLAGS.checkpoint_path))
     saver.restore(sess, FLAGS.checkpoint_path)
+    with tf.contrib.slim.queues.QueueRunners(sess):
+      topk_v = sess.run(m.topk)
+      print(topk_v)
 
 def main(_):
   if FLAGS.mode == 'train':
