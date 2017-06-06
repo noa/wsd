@@ -42,7 +42,7 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-  'mode', 'train', 'One of [train|topk]')
+  'mode', 'train', 'One of [train|eval|topk]')
 flags.DEFINE_string(
   'corpus', 'ptb', 'Which dataset to train on')
 flags.DEFINE_string(
@@ -56,11 +56,13 @@ flags.DEFINE_string(
 flags.DEFINE_string(
   'input_path', None, '[topk] Path to input sentences for predictions.')
 flags.DEFINE_string(
-  'checkpoint_path', None, '[topk] Path to model checkpoint to restore.')
+  'checkpoint_path', None, '[topk|eval] Path to model checkpoint to restore.')
+flags.DEFINE_integer(
+  'num_eval_batch', 250, ['[eval] Number of evaluation batches to use.'])
 flags.DEFINE_string(
   'save_path', 'checkpoints', 'Directory for checkpoint files')
 flags.DEFINE_integer(
-  'save_secs', 60, 'Number of seconds between each model save.')
+  'save_secs', 60*5, 'Number of seconds between each model save.')
 flags.DEFINE_integer(
   'report_interval', 1000, 'Number of iterations between status updates.')
 flags.DEFINE_integer(
@@ -80,13 +82,46 @@ flags.DEFINE_integer(
 flags.DEFINE_bool(
   'lowercase', True, 'Lower case all words.')
 flags.DEFINE_float(
-  'dropout', 0.5, 'Dropout probability.')
+  'keep_prob', 0.75, 'Dropout probability.')
 flags.DEFINE_integer(
   'num_layer', 3, 'Number of stacked RNN layers.')
 flags.DEFINE_float(
   'learning_rate', 0.0001, 'Learning rate.')
 flags.DEFINE_float(
   'grad_clip', 10.0, 'Gradient norm clip.')
+
+def eval(raw_data_path, config, batch_size):
+  if not FLAGS.checkpoint_path:
+    raise ValueError('must provide checkpoint path')
+
+  with tf.name_scope("Valid"):
+    q = BucketedBatchQueue(raw_data_path, batch_size,
+                           is_training=False, name="valid_queue",
+                           force_preprocess=FLAGS.force_preprocess)
+    with tf.variable_scope("Model"):
+      m = RNNClassifier(config, q.batch, is_training=False)
+
+  saver = tf.train.Saver()
+  init_op = tf.group(tf.global_variables_initializer(),
+                     tf.local_variables_initializer())
+  with tf.Session() as sess:
+    # Initialize queues
+    sess.run(init_op)
+
+    # Restore model parameters
+    tf.logging.info('Restoring model: {}'.format(FLAGS.checkpoint_path))
+    saver.restore(sess, FLAGS.checkpoint_path)
+
+    # Run inference & print top K to stdout
+    tf.logging.info('Computing held-out perplexity...')
+    total_loss = 0
+    nbatch = 0
+    with tf.contrib.slim.queues.QueueRunners(sess):
+      for _ in range(FLAGS.num_eval_batch):
+        loss_v = sess.run(m.loss)
+        total_loss += loss_v
+        nbatch += 1
+    return total_loss / nbatch
 
 def train(raw_train_path, raw_dev_path, model_config, batch_size,
           num_training_iterations, save_path='checkpoints', save_secs=60,
@@ -105,7 +140,7 @@ def train(raw_train_path, raw_dev_path, model_config, batch_size,
     with tf.variable_scope("Model", reuse=True):
       mvalid = RNNClassifier(model_config, valid_queue.batch, is_training=False)
 
-  saver = tf.train.Saver(max_to_keep=10,
+  saver = tf.train.Saver(max_to_keep=5,
                          keep_checkpoint_every_n_hours=1)
 
   hooks = [
@@ -139,7 +174,7 @@ def get_model_config(vocab_size):
   config = HParams(num_label=vocab_size, vocab_size=vocab_size,
                    embed_size=FLAGS.embed_size, hidden_size=FLAGS.hidden_size,
                    cell_type='gru', num_layer=FLAGS.num_layer,
-                   keep_prob=FLAGS.dropout, K=FLAGS.K,
+                   keep_prob=FLAGS.keep_prob, K=FLAGS.K,
                    learning_rate=FLAGS.learning_rate, grad_clip=FLAGS.grad_clip,
                    optimizer='adam')
   return config
@@ -169,6 +204,30 @@ def run_training():
   train(raw_train_path, raw_dev_path, config, FLAGS.batch_size,
         FLAGS.num_training_iterations, save_path=FLAGS.save_path,
         save_secs=FLAGS.save_secs, report_interval=FLAGS.report_interval)
+
+def run_eval():
+  tf.logging.info('Using {} corpus'.format(FLAGS.corpus))
+  if FLAGS.corpus == 'ptb':
+    raw_train_path, raw_dev_path, vocab_path = prepare_ptb_data(
+      FLAGS.data_dir,
+      space_tokenizer,
+      lowercase=FLAGS.lowercase,
+      force=FLAGS.force_preprocess
+    )
+  else:
+    raise ValueError('unrecognized corpus: {}'.format(FLAGS.corpus))
+
+  # Read vocabulary
+  vocab, rev_vocab = initialize_vocabulary(vocab_path)
+  vocab_size = len(vocab)
+
+  # Get model configuration
+  config = get_model_config(vocab_size)
+
+  # Compute perplexity
+  mean_perplexity = eval(raw_dev_path, config, FLAGS.batch_size)
+
+  tf.logging.info('Mean held-out perplexity: %f', mean_perplexity)
 
 def run_topk():
   if not FLAGS.vocab_path:
@@ -203,19 +262,9 @@ def run_topk():
     tf.logging.info('Restoring model: {}'.format(FLAGS.checkpoint_path))
     saver.restore(sess, FLAGS.checkpoint_path)
 
-    # Run inference
+    # Run inference & print top K to stdout
     with tf.contrib.slim.queues.QueueRunners(sess):
-      inputs_v, logits_v, guesses_v, topk_v = sess.run([m.inputs, m.logits,
-                                                        m.guesses, m.topk_ids])
-      print('inputs')
-      for ex in ids_to_words(inputs_v, rev_vocab):
-        print(ex)
-      print('logits')
-      print(type(logits_v))
-      print('guesses')
-      print(type(guesses_v))
-      print(ids_to_words(guesses_v, rev_vocab))
-      print('topk')
+      topk_v = sess.run([m.topk_ids])
       print(type(topk_v))
       for tk in ids_to_words(topk_v, rev_vocab):
         print(tk)
@@ -224,6 +273,8 @@ def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
   if FLAGS.mode == 'train':
     run_training()
+  elif FLAGS.mode == 'eval':
+    run_eval()
   elif FLAGS.mode == 'topk':
     run_topk()
   else:

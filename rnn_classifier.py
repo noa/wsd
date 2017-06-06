@@ -139,7 +139,10 @@ class RNNClassifier(object):
 
       if not is_training:
         self._topk_log_probs, self._topk_ids = tf.nn.top_k(
-          tf.log(tf.nn.softmax(self._decoder_logits)), k=config.K)
+          tf.log(tf.nn.softmax(self._decoder_logits)),
+          sorted=True, #  If true the resulting k elements will be
+                       #  sorted by the values in descending order
+          k=config.K)
 
   def _init_optimizer(self, is_training, config):
     if not is_training:

@@ -34,6 +34,7 @@ from wsd_utils import sentence_to_token_ids
 from wsd_utils import instances_from_ids
 from wsd_utils import ids_to_words
 
+
 class InferenceBatchQueue(object):
   def __init__(self, raw_path, vocab, batch_size, lowercase=False, name=None):
     seqs = []
