@@ -159,7 +159,7 @@ def run_training():
     raise ValueError('unrecognized corpus: {}'.format(FLAGS.corpus))
 
   # Read vocabulary
-  vocab, rev_vocab = initialize_vocabulary(FLAGS.vocab_path)
+  vocab, rev_vocab = initialize_vocabulary(vocab_path)
   vocab_size = len(vocab)
 
   # Get model configuration
