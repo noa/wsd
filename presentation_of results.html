@@ -1,0 +1,1476 @@
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>annotation</th>
+      <th>original_sentence</th>
+      <th>propositions</th>
+      <th>words</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['the', 'british', 'some', 'these', 'but']</td>
+      <td>Business</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['inc.', 'corp.', 'co.', 'officials', 'who']</td>
+      <td>leaders</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['is', '&lt;unk&gt;', 'inc.', 'plc', 'announced']</td>
+      <td>proposed</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['&lt;unk&gt;', 'chief', 'N', 'capital', 'higher']</td>
+      <td>a</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['decision', 'effort', 'ability', 'offer', 'need']</td>
+      <td>policy</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['market', 'of', 'to', "'", 'price']</td>
+      <td>to</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['buy', 'sell', 'have', 'reduce', 'provide']</td>
+      <td>increase</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['the', 'their', 'for', 'by', 'its']</td>
+      <td>corporate</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td>Business leaders proposed a policy to increase corporate control</td>
+      <td>['stock', 'markets', 'companies', 'chemicals', 'earnings']</td>
+      <td>control</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['but', 'and', 'officials', '&lt;unk&gt;', 'prices']</td>
+      <td>Leaders</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['and', 'in', 'but', 'of', 'said']</td>
+      <td>in</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['they', 'there', 'it', 'investors', 'companies']</td>
+      <td>Europe</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['companies', 'stocks', 'investors', 'officials', 'bonds']</td>
+      <td>have</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['&lt;unk&gt;', 'set', 'made', 'taken', 'sold']</td>
+      <td>invested</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['by', 'for', 'in', 'to', 'on']</td>
+      <td>in</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['the', 'their', 'other', 'british', 'a']</td>
+      <td>renewable</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['their', '&lt;unk&gt;', 'the', 'new', 'capital']</td>
+      <td>energy</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td></td>
+      <td>Leaders in Europe have invested in renewable energy industries</td>
+      <td>['companies', 'markets', 'stocks', 'investors', 'securities']</td>
+      <td>industries</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['there', 'it', 'they', 'he', 'this']</td>
+      <td>It</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>["'s", 'is', 'are', 'was', 'have']</td>
+      <td>was</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['a', 'in', 'like', 'very', 'some']</td>
+      <td>very</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['very', 'a', 'more', 'than', 'in']</td>
+      <td>dark</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['but', 'if', 'that', 'and', 'as']</td>
+      <td>night,</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['it', 'who', 'there', 'that', 'and']</td>
+      <td>there</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>["'s", 'is', 'says', 'do', 'for']</td>
+      <td>was</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>["n't", 'in', 'not', 'very', 'about']</td>
+      <td>no</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['&lt;unk&gt;', 'own', 'problem', 'think', 'says']</td>
+      <td>light</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['a', 'the', 'some', 'in', 'and']</td>
+      <td>My</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['genetic', 'most', 'w.', 'other', '&lt;unk&gt;']</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['york', 'companies', 'shares', 'tv', 'government']</td>
+      <td>phone,</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['&lt;unk&gt;', 'market', 'government', "'s", 'issue']</td>
+      <td>iphone</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['also', 'who', 'issue', 'institute', 'guidelines']</td>
+      <td>5s,</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['is', 'are', 'have', 'and', "'s"]</td>
+      <td>is</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['in', 'very', "n't", 'on', 'more']</td>
+      <td>very</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['&lt;unk&gt;', 'comment', 'more', 'own', 'enough']</td>
+      <td>light</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['the', '&lt;unk&gt;', 'but', 'some', 'mr.']</td>
+      <td>Fast</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['&lt;unk&gt;', 'is', 'are', 'was', 'has']</td>
+      <td>tanks</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['is', '&lt;unk&gt;', 'are', 'was', 'officials']</td>
+      <td>used</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['the', 'by', 'a', 'in', 'on']</td>
+      <td>during</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['the', 'london', 'an', 'british', '&lt;unk&gt;']</td>
+      <td>world</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['investors', 'companies', 'airlines', 'stocks', 'brothers']</td>
+      <td>war</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['co.', 'investors', 'companies', 'officials', 'airlines']</td>
+      <td>II</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['the', '&lt;unk&gt;', 'some', 'and', 'that']</td>
+      <td>by</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['they', 'it', 'japan', 'london', 'jaguar']</td>
+      <td>germans</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['are', '&lt;unk&gt;', 'it', 'is', 'was']</td>
+      <td>were</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['a', 'the', 'an', 'their', 'to']</td>
+      <td>called</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['&lt;unk&gt;', 'it', 'investors', 'them', 'japan']</td>
+      <td>Tigers</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['the', 'a', 'to', 'and', 'some']</td>
+      <td>Golf</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['and', "'s", 'of', 'the', 'in']</td>
+      <td>player</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['and', 'of', 'by', 'for', 'said']</td>
+      <td>Tiger</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['who', 'and', 'also', 'which', 'has']</td>
+      <td>Woods</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['a', 'the', 'and', 'for', 'of']</td>
+      <td>had</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['a', 'the', 'an', '&lt;unk&gt;', 'very']</td>
+      <td>great</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['the', 'a', 'their', 'this', 'next']</td>
+      <td>golf</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['said', 'corp', 'inc', 'rates', 'practices']</td>
+      <td>season</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['there', 'they', 'companies', 'we', 'people']</td>
+      <td>Tigers</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['and', 'to', 'is', 'are', 'officials']</td>
+      <td>are</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>["n't", 'not', 'still', '&lt;unk&gt;', 'in']</td>
+      <td>dangerous</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['down', 'up', '&lt;unk&gt;', 'out', 'more']</td>
+      <td>animals</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['but', 'and', 'than', 'as', 'if']</td>
+      <td>and</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['a', 'the', 'an', 'not', 'be']</td>
+      <td>they</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['&lt;unk&gt;', 'need', 'see', 'do', 'have']</td>
+      <td>live</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['in', 'on', 'for', 'by', 'about']</td>
+      <td>in</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['the', 'their', 'recent', 'new', 'two']</td>
+      <td>Asia</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['companies', 'investors', 'earnings', 'stocks', 'cells']</td>
+      <td>planes</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Customer_Problem_Reception</td>
+      <td>i'm having reception problems</td>
+      <td>['but', 'for', 'and', 'in', 'so']</td>
+      <td>i'm</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Customer_Problem_Reception</td>
+      <td>i'm having reception problems</td>
+      <td>["'s", 'and', 'are', 'is', 'a']</td>
+      <td>having</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Customer_Problem_Reception</td>
+      <td>i'm having reception problems</td>
+      <td>['&lt;unk&gt;', 'buy', 'have', 'more', 'higher']</td>
+      <td>reception</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Customer_Problem_Reception</td>
+      <td>i'm having reception problems</td>
+      <td>['it', 'comment', 'monday', '&lt;unk&gt;', 'N']</td>
+      <td>problems</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Agent_Offer_iPhone</td>
+      <td>interest you in the iphone</td>
+      <td>['but', 'and', 'so', 'as', '&lt;unk&gt;']</td>
+      <td>interest</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Agent_Offer_iPhone</td>
+      <td>interest you in the iphone</td>
+      <td>['trading', 'securities', 'prices', 'inc', 'yesterday']</td>
+      <td>you</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Agent_Offer_iPhone</td>
+      <td>interest you in the iphone</td>
+      <td>["'s", 'is', 'see', 'have', 'added']</td>
+      <td>in</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Agent_Offer_iPhone</td>
+      <td>interest you in the iphone</td>
+      <td>['the', '&lt;unk&gt;', 'a', 'their', 'an']</td>
+      <td>the</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Agent_Offer_iPhone</td>
+      <td>interest you in the iphone</td>
+      <td>['market', '&lt;unk&gt;', 'issue', 'stock', 'week']</td>
+      <td>iphone</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Customer_Solution Rebuttal</td>
+      <td>don't think this is going to help</td>
+      <td>['i', 'they', 'we', 'you', 'he']</td>
+      <td>don't</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Customer_Solution Rebuttal</td>
+      <td>don't think this is going to help</td>
+      <td>['said', 'and', 'say', 'but', "'s"]</td>
+      <td>think</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Customer_Solution Rebuttal</td>
+      <td>don't think this is going to help</td>
+      <td>['they', 'he', 'it', 'there', 'terms']</td>
+      <td>this</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Customer_Solution Rebuttal</td>
+      <td>don't think this is going to help</td>
+      <td>['is', 'was', 'are', "'s", 'has']</td>
+      <td>is</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Customer_Solution Rebuttal</td>
+      <td>don't think this is going to help</td>
+      <td>['expected', 'not', "n't", 'trying', 'try']</td>
+      <td>going</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Customer_Solution Rebuttal</td>
+      <td>don't think this is going to help</td>
+      <td>['to', 'for', 'on', 'in', 'at']</td>
+      <td>to</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Customer_Solution Rebuttal</td>
+      <td>don't think this is going to help</td>
+      <td>['comment', 'be', 'do', "n't", 'work']</td>
+      <td>help</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Agent_Hold</td>
+      <td>please hold</td>
+      <td>['they', 'he', 'i', 'it', 'you']</td>
+      <td>please</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Agent_Hold</td>
+      <td>please hold</td>
+      <td>['comment', '&lt;unk&gt;', 'he', 'end', 'do']</td>
+      <td>hold</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Agent_Offer_Signal Booster</td>
+      <td>you need a signal booster</td>
+      <td>['they', 'i', 'we', 'you', 'there']</td>
+      <td>you</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Agent_Offer_Signal Booster</td>
+      <td>you need a signal booster</td>
+      <td>['have', "'s", 'is', 'see', 'had']</td>
+      <td>need</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Agent_Offer_Signal Booster</td>
+      <td>you need a signal booster</td>
+      <td>['to', 'a', 'the', "n't", 'some']</td>
+      <td>a</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Agent_Offer_Signal Booster</td>
+      <td>you need a signal booster</td>
+      <td>['own', 'longer', '&lt;unk&gt;', 'little', 'major']</td>
+      <td>signal</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Agent_Offer_Signal Booster</td>
+      <td>you need a signal booster</td>
+      <td>['says', 'problem', '&lt;unk&gt;', 'too', 'here']</td>
+      <td>booster</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Customer_Anger</td>
+      <td>this is outrageous!</td>
+      <td>['there', 'it', 'he', 'they', 'terms']</td>
+      <td>this</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Customer_Anger</td>
+      <td>this is outrageous!</td>
+      <td>['month', 'street', 'week', 'bond', 'can']</td>
+      <td>is</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Customer_Anger</td>
+      <td>this is outrageous!</td>
+      <td>["n't", '&lt;unk&gt;', 'comment', 'he', 'now']</td>
+      <td>outrageous!</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Customer_Churn_Competitor</td>
+      <td>switch back to sprint</td>
+      <td>['&lt;unk&gt;', 'not', 'is', 'are', 'but']</td>
+      <td>switch</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Customer_Churn_Competitor</td>
+      <td>switch back to sprint</td>
+      <td>['according', 'declined', 'close', 'contributed', 'expected']</td>
+      <td>back</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Customer_Churn_Competitor</td>
+      <td>switch back to sprint</td>
+      <td>['in', 'the', 'for', 'on', 'to']</td>
+      <td>to</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Customer_Churn_Competitor</td>
+      <td>switch back to sprint</td>
+      <td>['comment', 'be', 'do', 'N', 'work']</td>
+      <td>sprint</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Agent_Empathy</td>
+      <td>i'm sorry that you feel this way,</td>
+      <td>['in', 'but', 'for', 'and', 'some']</td>
+      <td>i'm</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Agent_Empathy</td>
+      <td>i'm sorry that you feel this way,</td>
+      <td>['&lt;unk&gt;', 'added', "'s", 'said', 'is']</td>
+      <td>sorry</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Agent_Empathy</td>
+      <td>i'm sorry that you feel this way,</td>
+      <td>['said', 'say', 'but', 'when', 'added']</td>
+      <td>that</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Agent_Empathy</td>
+      <td>i'm sorry that you feel this way,</td>
+      <td>['they', 'he', 'i', 'you', 'we']</td>
+      <td>you</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Agent_Empathy</td>
+      <td>i'm sorry that you feel this way,</td>
+      <td>['&lt;unk&gt;', 'see', 'have', 'do', 'say']</td>
+      <td>feel</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>Agent_Empathy</td>
+      <td>i'm sorry that you feel this way,</td>
+      <td>['a', 'not', "n't", 'the', '&lt;unk&gt;']</td>
+      <td>this</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>Agent_Empathy</td>
+      <td>i'm sorry that you feel this way,</td>
+      <td>['month', 'week', 'market', 'year', '&lt;unk&gt;']</td>
+      <td>way,</td>
+    </tr>
+    <tr>
+      <th>102</th>
+      <td>Agent_Solutions Exhausted</td>
+      <td>nothing more could do</td>
+      <td>['&lt;unk&gt;', 'not', 'it', 'so', 'but']</td>
+      <td>nothing</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>Agent_Solutions Exhausted</td>
+      <td>nothing more could do</td>
+      <td>['it', 'he', 'there', 'they', 'she']</td>
+      <td>more</td>
+    </tr>
+    <tr>
+      <th>104</th>
+      <td>Agent_Solutions Exhausted</td>
+      <td>nothing more could do</td>
+      <td>['more', 'some', 'you', 'many', 'so']</td>
+      <td>could</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>Agent_Solutions Exhausted</td>
+      <td>nothing more could do</td>
+      <td>['comment', 'do', 'be', 'think', 'work']</td>
+      <td>do</td>
+    </tr>
+    <tr>
+      <th>106</th>
+      <td>Customer_Objection_Price</td>
+      <td>don't want to pay extra to have</td>
+      <td>['they', 'we', 'i', 'you', 'he']</td>
+      <td>don't</td>
+    </tr>
+    <tr>
+      <th>107</th>
+      <td>Customer_Objection_Price</td>
+      <td>don't want to pay extra to have</td>
+      <td>['declined', 'plans', 'continues', 'continued', 'want']</td>
+      <td>want</td>
+    </tr>
+    <tr>
+      <th>108</th>
+      <td>Customer_Objection_Price</td>
+      <td>don't want to pay extra to have</td>
+      <td>['to', 'and', 'for', 'a', 'on']</td>
+      <td>to</td>
+    </tr>
+    <tr>
+      <th>109</th>
+      <td>Customer_Objection_Price</td>
+      <td>don't want to pay extra to have</td>
+      <td>['be', 'have', 'get', 'do', 'help']</td>
+      <td>pay</td>
+    </tr>
+    <tr>
+      <th>110</th>
+      <td>Customer_Objection_Price</td>
+      <td>don't want to pay extra to have</td>
+      <td>['them', 'earnings', 'investors', 'demand', 'power']</td>
+      <td>extra</td>
+    </tr>
+    <tr>
+      <th>111</th>
+      <td>Customer_Objection_Price</td>
+      <td>don't want to pay extra to have</td>
+      <td>['companies', 'cells', 'their', 'tv', 'or']</td>
+      <td>to</td>
+    </tr>
+    <tr>
+      <th>112</th>
+      <td>Customer_Objection_Price</td>
+      <td>don't want to pay extra to have</td>
+      <td>['&lt;unk&gt;', 'comment', 'stocks', 'them', 'do']</td>
+      <td>have</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>Agent_Empathy</td>
+      <td>I understand how this can be upsetting</td>
+      <td>['to', 'they', 'and', 'i', 'but']</td>
+      <td>I</td>
+    </tr>
+    <tr>
+      <th>114</th>
+      <td>Agent_Empathy</td>
+      <td>I understand how this can be upsetting</td>
+      <td>['see', 'say', 'think', 'know', 'do']</td>
+      <td>understand</td>
+    </tr>
+    <tr>
+      <th>115</th>
+      <td>Agent_Empathy</td>
+      <td>I understand how this can be upsetting</td>
+      <td>['that', "n't", 'all', 'it', 'much']</td>
+      <td>how</td>
+    </tr>
+    <tr>
+      <th>116</th>
+      <td>Agent_Empathy</td>
+      <td>I understand how this can be upsetting</td>
+      <td>['they', 'it', 'you', 'there', 'he']</td>
+      <td>this</td>
+    </tr>
+    <tr>
+      <th>117</th>
+      <td>Agent_Empathy</td>
+      <td>I understand how this can be upsetting</td>
+      <td>['could', 'would', 'will', 'can', 'must']</td>
+      <td>can</td>
+    </tr>
+    <tr>
+      <th>118</th>
+      <td>Agent_Empathy</td>
+      <td>I understand how this can be upsetting</td>
+      <td>['be', 'do', 'have', 'get', 'not']</td>
+      <td>be</td>
+    </tr>
+    <tr>
+      <th>119</th>
+      <td>Agent_Empathy</td>
+      <td>I understand how this can be upsetting</td>
+      <td>['too', 'done', 'not', 'own', 'little']</td>
+      <td>upsetting</td>
+    </tr>
+    <tr>
+      <th>120</th>
+      <td>Agent_Confidence</td>
+      <td>Let me propose I can</td>
+      <td>['in', 'but', 'for', 'so', 'on']</td>
+      <td>Let</td>
+    </tr>
+    <tr>
+      <th>121</th>
+      <td>Agent_Confidence</td>
+      <td>Let me propose I can</td>
+      <td>['they', 'i', 'you', 'some', 'the']</td>
+      <td>me</td>
+    </tr>
+    <tr>
+      <th>122</th>
+      <td>Agent_Confidence</td>
+      <td>Let me propose I can</td>
+      <td>['do', 'say', 'want', 'think', 'have']</td>
+      <td>propose</td>
+    </tr>
+    <tr>
+      <th>123</th>
+      <td>Agent_Confidence</td>
+      <td>Let me propose I can</td>
+      <td>['he', 'it', 'you', 'they', 'she']</td>
+      <td>I</td>
+    </tr>
+    <tr>
+      <th>124</th>
+      <td>Agent_Confidence</td>
+      <td>Let me propose I can</td>
+      <td>['do', 'think', 'have', "'m", 'want']</td>
+      <td>can</td>
+    </tr>
+    <tr>
+      <th>125</th>
+      <td>Agent_Offer_1 month free</td>
+      <td>offer you one month free</td>
+      <td>['but', 'in', 'for', 'and', 'on']</td>
+      <td>offer</td>
+    </tr>
+    <tr>
+      <th>126</th>
+      <td>Agent_Offer_1 month free</td>
+      <td>offer you one month free</td>
+      <td>['in', 'on', 'for', 'by', 'at']</td>
+      <td>you</td>
+    </tr>
+    <tr>
+      <th>127</th>
+      <td>Agent_Offer_1 month free</td>
+      <td>offer you one month free</td>
+      <td>['a', 'the', "'s", 'last', 'next']</td>
+      <td>one</td>
+    </tr>
+    <tr>
+      <th>128</th>
+      <td>Agent_Offer_1 month free</td>
+      <td>offer you one month free</td>
+      <td>['of', 'than', 'is', 'too', 'very']</td>
+      <td>month</td>
+    </tr>
+    <tr>
+      <th>129</th>
+      <td>Agent_Offer_1 month free</td>
+      <td>offer you one month free</td>
+      <td>['said', 'earlier', 'ago', 'inc', 'outstanding']</td>
+      <td>free</td>
+    </tr>
+    <tr>
+      <th>130</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>['there', 'it', 'they', 'he', 'this']</td>
+      <td>that</td>
+    </tr>
+    <tr>
+      <th>131</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>["'s", 'is', 'are', 'have', 'do']</td>
+      <td>is</td>
+    </tr>
+    <tr>
+      <th>132</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>["n't", 'not', 'it', 'them', 'still']</td>
+      <td>more</td>
+    </tr>
+    <tr>
+      <th>133</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>['than', 'if', 'like', 'how', 'more']</td>
+      <td>like</td>
+    </tr>
+    <tr>
+      <th>134</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>['it', 'how', 'people', 'what', 'if']</td>
+      <td>it</td>
+    </tr>
+    <tr>
+      <th>135</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>['he', 'they', 'you', 'we', 'who']</td>
+      <td>I</td>
+    </tr>
+    <tr>
+      <th>136</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>['not', "n't", 'can', 'do', "'ve"]</td>
+      <td>can</td>
+    </tr>
+    <tr>
+      <th>137</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>['do', 'get', 'have', 'comment', 'come']</td>
+      <td>agree</td>
+    </tr>
+    <tr>
+      <th>138</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>['&lt;unk&gt;', 'it', 'on', 'not', 'out']</td>
+      <td>to</td>
+    </tr>
+    <tr>
+      <th>139</th>
+      <td>Customer_Agreement</td>
+      <td>that is more like it I can agree to that</td>
+      <td>['do', '&lt;unk&gt;', 'comment', 'be', 'get']</td>
+      <td>that</td>
+    </tr>
+    <tr>
+      <th>140</th>
+      <td>Customer_Gratitude</td>
+      <td>thank you</td>
+      <td>['&lt;unk&gt;', 'in', 'but', 'so', 'not']</td>
+      <td>thank</td>
+    </tr>
+    <tr>
+      <th>141</th>
+      <td>Customer_Gratitude</td>
+      <td>thank you</td>
+      <td>['inc', 'comment', 'he', '&lt;unk&gt;', 'corp']</td>
+      <td>you</td>
+    </tr>
+    <tr>
+      <th>142</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['but', 'and', 'if', 'so', 'as']</td>
+      <td>have</td>
+    </tr>
+    <tr>
+      <th>143</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['very', "n't", 'not', 'to', 'some']</td>
+      <td>i</td>
+    </tr>
+    <tr>
+      <th>144</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['think', 'see', 'say', 'know', 'have']</td>
+      <td>assisted</td>
+    </tr>
+    <tr>
+      <th>145</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['&lt;unk&gt;', 'out', 'not', 'them', 'much']</td>
+      <td>you</td>
+    </tr>
+    <tr>
+      <th>146</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['see', 'know', 'say', 'think', '&lt;unk&gt;']</td>
+      <td>with</td>
+    </tr>
+    <tr>
+      <th>147</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['some', 'all', 'most', 'part', 'many']</td>
+      <td>all</td>
+    </tr>
+    <tr>
+      <th>148</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['on', 'of', 'in', 'for', 'with']</td>
+      <td>of</td>
+    </tr>
+    <tr>
+      <th>149</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['the', 'their', 'other', 'our', 'many']</td>
+      <td>your</td>
+    </tr>
+    <tr>
+      <th>150</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['&lt;unk&gt;', 'own', 'major', 'very', 'other']</td>
+      <td>issues</td>
+    </tr>
+    <tr>
+      <th>151</th>
+      <td>Agent_Request for Evaluation</td>
+      <td>have i assisted you with all of your issues today?</td>
+      <td>['&lt;unk&gt;', 'says', 'said', "'s", 'he']</td>
+      <td>today?</td>
+    </tr>
+    <tr>
+      <th>152</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>['so', 'and', 'not', 'but', 'as']</td>
+      <td>thanks</td>
+    </tr>
+    <tr>
+      <th>153</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>['as', 'is', 'but', 'for', 'and']</td>
+      <td>very</td>
+    </tr>
+    <tr>
+      <th>154</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>['&lt;unk&gt;', 'analyst', 'own', 'longer', 'way']</td>
+      <td>much</td>
+    </tr>
+    <tr>
+      <th>155</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>['than', 'of', 'for', 'in', 'on']</td>
+      <td>for</td>
+    </tr>
+    <tr>
+      <th>156</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>['the', 'a', 'their', 'other', 'some']</td>
+      <td>your</td>
+    </tr>
+    <tr>
+      <th>157</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>['way', 'problem', 'issue', 'case', 'cell']</td>
+      <td>help,</td>
+    </tr>
+    <tr>
+      <th>158</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>['who', 'he', 'they', 'it', 'which']</td>
+      <td>you</td>
+    </tr>
+    <tr>
+      <th>159</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>["'s", 'have', 'do', 'are', 'is']</td>
+      <td>were</td>
+    </tr>
+    <tr>
+      <th>160</th>
+      <td>Customer_Positive Feedback</td>
+      <td>thanks very much for your help, you were great</td>
+      <td>["n't", 'it', 'them', 'not', 'more']</td>
+      <td>great</td>
+    </tr>
+    <tr>
+      <th>161</th>
+      <td>Customer_Gratitude</td>
+      <td>thanks</td>
+      <td>['he', 'comment', 'terms', 'it', 'there']</td>
+      <td>thanks</td>
+    </tr>
+    <tr>
+      <th>162</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['there', 'it', 'they', 'he', 'this']</td>
+      <td>It</td>
+    </tr>
+    <tr>
+      <th>163</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>["'s", 'is', 'are', 'was', 'have']</td>
+      <td>was</td>
+    </tr>
+    <tr>
+      <th>164</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['a', 'in', 'like', 'very', 'some']</td>
+      <td>very</td>
+    </tr>
+    <tr>
+      <th>165</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['very', 'a', 'more', 'than', 'in']</td>
+      <td>dark</td>
+    </tr>
+    <tr>
+      <th>166</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['but', 'if', 'that', 'and', 'as']</td>
+      <td>night,</td>
+    </tr>
+    <tr>
+      <th>167</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['it', 'who', 'there', 'that', 'and']</td>
+      <td>there</td>
+    </tr>
+    <tr>
+      <th>168</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>["'s", 'is', 'says', 'do', 'for']</td>
+      <td>was</td>
+    </tr>
+    <tr>
+      <th>169</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>["n't", 'in', 'not', 'very', 'about']</td>
+      <td>no</td>
+    </tr>
+    <tr>
+      <th>170</th>
+      <td></td>
+      <td>It was very dark night, there was no light</td>
+      <td>['&lt;unk&gt;', 'own', 'problem', 'think', 'says']</td>
+      <td>light</td>
+    </tr>
+    <tr>
+      <th>171</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['a', 'the', 'some', 'in', 'and']</td>
+      <td>My</td>
+    </tr>
+    <tr>
+      <th>172</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['genetic', 'most', 'w.', 'other', '&lt;unk&gt;']</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <th>173</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['york', 'companies', 'shares', 'tv', 'government']</td>
+      <td>phone,</td>
+    </tr>
+    <tr>
+      <th>174</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['&lt;unk&gt;', 'market', 'government', "'s", 'issue']</td>
+      <td>iphone</td>
+    </tr>
+    <tr>
+      <th>175</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['also', 'who', 'issue', 'institute', 'guidelines']</td>
+      <td>5s,</td>
+    </tr>
+    <tr>
+      <th>176</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['is', 'are', 'have', 'and', "'s"]</td>
+      <td>is</td>
+    </tr>
+    <tr>
+      <th>177</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['in', 'very', "n't", 'on', 'more']</td>
+      <td>very</td>
+    </tr>
+    <tr>
+      <th>178</th>
+      <td></td>
+      <td>My new phone, iphone 5s, is very light</td>
+      <td>['&lt;unk&gt;', 'comment', 'more', 'own', 'enough']</td>
+      <td>light</td>
+    </tr>
+    <tr>
+      <th>179</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['the', '&lt;unk&gt;', 'but', 'some', 'mr.']</td>
+      <td>Fast</td>
+    </tr>
+    <tr>
+      <th>180</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['&lt;unk&gt;', 'is', 'are', 'was', 'has']</td>
+      <td>tanks</td>
+    </tr>
+    <tr>
+      <th>181</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['is', '&lt;unk&gt;', 'are', 'was', 'officials']</td>
+      <td>used</td>
+    </tr>
+    <tr>
+      <th>182</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['the', 'by', 'a', 'in', 'on']</td>
+      <td>during</td>
+    </tr>
+    <tr>
+      <th>183</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['the', 'london', 'an', 'british', '&lt;unk&gt;']</td>
+      <td>world</td>
+    </tr>
+    <tr>
+      <th>184</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['investors', 'companies', 'airlines', 'stocks', 'brothers']</td>
+      <td>war</td>
+    </tr>
+    <tr>
+      <th>185</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['co.', 'investors', 'companies', 'officials', 'airlines']</td>
+      <td>II</td>
+    </tr>
+    <tr>
+      <th>186</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['the', '&lt;unk&gt;', 'some', 'and', 'that']</td>
+      <td>by</td>
+    </tr>
+    <tr>
+      <th>187</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['they', 'it', 'japan', 'london', 'jaguar']</td>
+      <td>germans</td>
+    </tr>
+    <tr>
+      <th>188</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['are', '&lt;unk&gt;', 'it', 'is', 'was']</td>
+      <td>were</td>
+    </tr>
+    <tr>
+      <th>189</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['a', 'the', 'an', 'their', 'to']</td>
+      <td>called</td>
+    </tr>
+    <tr>
+      <th>190</th>
+      <td></td>
+      <td>Fast tanks used during world war II by germans were called Tigers</td>
+      <td>['&lt;unk&gt;', 'it', 'investors', 'them', 'japan']</td>
+      <td>Tigers</td>
+    </tr>
+    <tr>
+      <th>191</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['the', 'a', 'to', 'and', 'some']</td>
+      <td>Golf</td>
+    </tr>
+    <tr>
+      <th>192</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['and', "'s", 'of', 'the', 'in']</td>
+      <td>player</td>
+    </tr>
+    <tr>
+      <th>193</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['and', 'of', 'by', 'for', 'said']</td>
+      <td>Tiger</td>
+    </tr>
+    <tr>
+      <th>194</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['who', 'and', 'also', 'which', 'has']</td>
+      <td>Woods</td>
+    </tr>
+    <tr>
+      <th>195</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['a', 'the', 'and', 'for', 'of']</td>
+      <td>had</td>
+    </tr>
+    <tr>
+      <th>196</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['a', 'the', 'an', '&lt;unk&gt;', 'very']</td>
+      <td>great</td>
+    </tr>
+    <tr>
+      <th>197</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['the', 'a', 'their', 'this', 'next']</td>
+      <td>golf</td>
+    </tr>
+    <tr>
+      <th>198</th>
+      <td></td>
+      <td>Golf player Tiger Woods had great golf season</td>
+      <td>['said', 'corp', 'inc', 'rates', 'practices']</td>
+      <td>season</td>
+    </tr>
+    <tr>
+      <th>199</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['there', 'they', 'companies', 'we', 'people']</td>
+      <td>Tigers</td>
+    </tr>
+    <tr>
+      <th>200</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['and', 'to', 'is', 'are', 'officials']</td>
+      <td>are</td>
+    </tr>
+    <tr>
+      <th>201</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>["n't", 'not', 'still', '&lt;unk&gt;', 'in']</td>
+      <td>dangerous</td>
+    </tr>
+    <tr>
+      <th>202</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['down', 'up', '&lt;unk&gt;', 'out', 'more']</td>
+      <td>animals</td>
+    </tr>
+    <tr>
+      <th>203</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['but', 'and', 'than', 'as', 'if']</td>
+      <td>and</td>
+    </tr>
+    <tr>
+      <th>204</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['a', 'the', 'an', 'not', 'be']</td>
+      <td>they</td>
+    </tr>
+    <tr>
+      <th>205</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['&lt;unk&gt;', 'need', 'see', 'do', 'have']</td>
+      <td>live</td>
+    </tr>
+    <tr>
+      <th>206</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['in', 'on', 'for', 'by', 'about']</td>
+      <td>in</td>
+    </tr>
+    <tr>
+      <th>207</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['the', 'their', 'recent', 'new', 'two']</td>
+      <td>Asia</td>
+    </tr>
+    <tr>
+      <th>208</th>
+      <td></td>
+      <td>Tigers are dangerous animals and they live in Asia planes</td>
+      <td>['companies', 'investors', 'earnings', 'stocks', 'cells']</td>
+      <td>planes</td>
+    </tr>
+  </tbody>
+</table>
